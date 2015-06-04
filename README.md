@@ -2,7 +2,7 @@
 IN4152 Computer Graphics Project
 
 ## Gameplay elements
-### Must
+#### Must
 * Bird model
 * Jumping
 * Rotating/tilting of the bird (implemented with transformation matrices)
@@ -11,18 +11,18 @@ IN4152 Computer Graphics Project
 * Collision
 * Background (3D height-field terrain, procedurally generated)
 
-### Should
+#### Should
 * Final boss
 * 
 
 
 ## Effects
-### Must
+#### Must
 * Textured quads as bullets
 * Bullets need to be animated by swtiching the texture frame to frame.
 * Background should be Phong shaded
 
-### Should
+#### Should
 * 
 
 
