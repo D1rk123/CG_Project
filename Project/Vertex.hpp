@@ -3,7 +3,7 @@
 #include <glm/vec3.hpp>
 
 /**
- @brief contains the data of one vertex
+ @brief Contains the data of one vertex.
 
  @author Dirk Schut
  @since 4-6-2015

@@ -20,11 +20,10 @@ const char* fragmentShaderName = "minimal.frag";
 ShaderHandler shaderHandler = ShaderHandler();
 Mesh mesh = Mesh();
 
-/* GLUT callback Handlers */
-
+// GLUT callback Handlers
 static void resize(int width, int height)
 {
-    const float ar = (float) width / (float) height;
+    //const float ar = (float) width / (float) height;
 
     glViewport(0, 0, width, height);
 
@@ -75,8 +74,7 @@ static void idle(void)
     glutPostRedisplay();
 }
 
-/* Program entry point */
-
+//Program entry point
 int main(int argc, char *argv[])
 {
     glutInit(&argc, argv);
@@ -105,7 +103,7 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    mesh.makeBuffers();
+    mesh.makeCube(vec3(0.0, 0.0, 0.0), vec3(0.3, 0.6, 0.5));
     shaderHandler.setupShaders(vertexShaderName, fragmentShaderName);
 
     glutMainLoop();

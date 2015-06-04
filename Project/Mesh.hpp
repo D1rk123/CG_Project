@@ -1,11 +1,19 @@
+#ifndef HPP_MESH
+#define HPP_MESH
 #include <GL/gl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <stdlib.h>
 #include "Vertex.hpp"
 
+using glm::vec3;
+
+/**
+ @brief Class for loading Mesh data into a VBO (OpenGL Vertex Buffer Object)
+*/
 class Mesh {
     GLuint vbo, ibo;
+    GLsizei indicesCount;
 
     public:
     GLuint getVBO() {
@@ -16,20 +24,20 @@ class Mesh {
     }
 
     GLsizei getIndicesCount() {
-        return 36;
+        return indicesCount;
     }
 
-    void makeBuffers()
+    void makeCube(glm::vec3 lower, glm::vec3 upper)
     {
         Vertex cubeCorners[] = {
-            Vertex(glm::vec3(0.0f, 0.0f, 0.0f)),
-            Vertex(glm::vec3(0.0f, 0.5f, 0.0f)),
-            Vertex(glm::vec3(0.5f, 0.0f, 0.0f)),
-            Vertex(glm::vec3(0.5f, 0.5f, 0.0f)),
-            Vertex(glm::vec3(0.0f, 0.0f, 0.5f)),
-            Vertex(glm::vec3(0.0f, 0.5f, 0.5f)),
-            Vertex(glm::vec3(0.5f, 0.0f, 0.5f)),
-            Vertex(glm::vec3(0.5f, 0.5f, 0.5f))
+            Vertex(glm::vec3(lower[0], lower[1], lower[2])),
+            Vertex(glm::vec3(lower[0], upper[1], lower[2])),
+            Vertex(glm::vec3(upper[0], lower[1], lower[2])),
+            Vertex(glm::vec3(upper[0], upper[1], lower[2])),
+            Vertex(glm::vec3(lower[0], lower[1], upper[2])),
+            Vertex(glm::vec3(lower[0], upper[1], upper[2])),
+            Vertex(glm::vec3(upper[0], lower[1], upper[2])),
+            Vertex(glm::vec3(upper[0], upper[1], upper[2]))
         };
         unsigned int cubeIndices[] = {
             2, 1, 0, //back side
@@ -45,6 +53,8 @@ class Mesh {
             0, 4, 6, //bottom side
             0, 6, 2
         };
+        indicesCount = 36;
+
         glGenBuffers(1, &vbo);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(cubeCorners), cubeCorners, GL_STATIC_DRAW);
@@ -58,3 +68,4 @@ class Mesh {
         glDeleteBuffers(1, &ibo);
     }
 };
+#endif HPP_MESH

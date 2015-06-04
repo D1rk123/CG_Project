@@ -1,5 +1,5 @@
-#ifndef HPP_SHADER
-#define HPP_SHADER
+#ifndef HPP_SHADERHANDLER
+#define HPP_SHADERHANDLER
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -7,8 +7,12 @@
 using std::cout;
 using std::endl;
 
+/**
+ @brief Class for loading vertex and fragment shaders into a shader program
+*/
 class ShaderHandler {
-    GLuint shaderProgram, vertexShader, fragmentShader
+    GLuint shaderProgram, vertexShader, fragmentShader;
+
     const char * loadFile(const char* filename)
     {
         std::ifstream file(filename);
@@ -45,8 +49,9 @@ class ShaderHandler {
         glAttachShader(program, *shader);
         return true;
     }
+
     public:
-    bool setupShaders(vertexShaderName, fragmentShaderName)
+    bool setupShaders(const char* vertexShaderName, const char* fragmentShaderName)
     {
         shaderProgram = glCreateProgram();
         addShader(&vertexShader, GL_VERTEX_SHADER, vertexShaderName, shaderProgram);
@@ -72,4 +77,4 @@ class ShaderHandler {
         return shaderProgram;
     }
 };
-#endif // HPP_SHADER
+#endif // HPP_SHADERHANDLER
