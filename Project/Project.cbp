@@ -50,6 +50,7 @@
 			<Add directory="../Libraries/glew-1.10.0/lib" />
 			<Add directory="../Libraries/DevIL-x86-1.7.8/lib" />
 		</Linker>
+		<Unit filename="MatrixStack.hpp" />
 		<Unit filename="Mesh.hpp" />
 		<Unit filename="ShaderHandler.hpp" />
 		<Unit filename="Vertex.hpp" />
