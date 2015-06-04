@@ -472,3 +472,12 @@
 1433406706 c:\code\libraries\c++\glm\include\glm\gtc\type_ptr.inl
 	<cstring>
 
+1066736514 c:\code\c++\cg_project\libraries\freeglut\include\gl\glut.h
+	"freeglut_std.h"
+
+1307677631 c:\code\c++\cg_project\libraries\freeglut\include\gl\freeglut_std.h
+	<windows.h>
+	<GL/gl.h>
+	<GL/glu.h>
+	<stdlib.h>
+
