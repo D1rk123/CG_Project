@@ -29,15 +29,16 @@ class Mesh {
 
     void makeCube(glm::vec3 lower, glm::vec3 upper)
     {
+        const GLfloat d = 0.57735026918962576; // 1/sqrt(3), (d, d, d) is a vector with length 1
         Vertex cubeCorners[] = {
-            Vertex(glm::vec3(lower[0], lower[1], lower[2])),
-            Vertex(glm::vec3(lower[0], upper[1], lower[2])),
-            Vertex(glm::vec3(upper[0], lower[1], lower[2])),
-            Vertex(glm::vec3(upper[0], upper[1], lower[2])),
-            Vertex(glm::vec3(lower[0], lower[1], upper[2])),
-            Vertex(glm::vec3(lower[0], upper[1], upper[2])),
-            Vertex(glm::vec3(upper[0], lower[1], upper[2])),
-            Vertex(glm::vec3(upper[0], upper[1], upper[2]))
+            Vertex(glm::vec3(lower[0], lower[1], lower[2]), glm::vec3(-d, -d, -d), glm::vec2(0.0, 0.0)),
+            Vertex(glm::vec3(lower[0], upper[1], lower[2]), glm::vec3(-d,  d, -d), glm::vec2(0.0, 0.0)),
+            Vertex(glm::vec3(upper[0], lower[1], lower[2]), glm::vec3( d, -d, -d), glm::vec2(0.0, 0.0)),
+            Vertex(glm::vec3(upper[0], upper[1], lower[2]), glm::vec3( d,  d, -d), glm::vec2(0.0, 0.0)),
+            Vertex(glm::vec3(lower[0], lower[1], upper[2]), glm::vec3(-d, -d,  d), glm::vec2(0.0, 0.0)),
+            Vertex(glm::vec3(lower[0], upper[1], upper[2]), glm::vec3(-d,  d,  d), glm::vec2(0.0, 0.0)),
+            Vertex(glm::vec3(upper[0], lower[1], upper[2]), glm::vec3( d, -d,  d), glm::vec2(0.0, 0.0)),
+            Vertex(glm::vec3(upper[0], upper[1], upper[2]), glm::vec3( d,  d,  d), glm::vec2(0.0, 0.0))
         };
         unsigned int cubeIndices[] = {
             2, 1, 0, //back side
@@ -68,4 +69,5 @@ class Mesh {
         glDeleteBuffers(1, &ibo);
     }
 };
-#endif HPP_MESH
+
+#endif //HPP_MESH

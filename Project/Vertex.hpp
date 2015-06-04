@@ -11,8 +11,10 @@
 struct Vertex
 {
     glm::vec3 pos;
+    glm::vec3 normal;
+    glm::vec2 tex;
 
-    Vertex(glm::vec3 pos) : pos(pos)
+    Vertex(glm::vec3 pos, glm::vec3 normal, glm::vec2 tex) : pos(pos), normal(normal), tex(tex)
     {
     }
 
