@@ -13,7 +13,7 @@ IN4152 Computer Graphics Project
 
 #### Should
 * Final boss
-* 
+* .obj 3d model file loader
 
 
 ## Effects
@@ -23,7 +23,8 @@ IN4152 Computer Graphics Project
 * Background should be Phong shaded
 
 #### Should
-* 
+* Normal maps
+* Particle effects
 
 
 ## Models
@@ -31,3 +32,6 @@ IN4152 Computer Graphics Project
 * Boss (optional)
 * Avoidables: Satellites
 * Destructibles: Asteroids, UFOs
+
+## Algemene Todo's
+* GLSL (OpenGL Shading Language) leren
