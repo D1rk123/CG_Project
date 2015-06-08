@@ -10,8 +10,8 @@ using std::endl;
 /**
  @brief Class for loading vertex and fragment shaders into a shader program
 */
-class ShaderHandler {
-    GLuint shaderProgram, vertexShader, fragmentShader;
+class ShaderProgram {
+    GLuint name, vertexShader, fragmentShader;
 
     const char * loadFile(const char* filename)
     {
@@ -53,28 +53,28 @@ class ShaderHandler {
     public:
     bool setupShaders(const char* vertexShaderName, const char* fragmentShaderName)
     {
-        shaderProgram = glCreateProgram();
-        addShader(&vertexShader, GL_VERTEX_SHADER, vertexShaderName, shaderProgram);
-        addShader(&fragmentShader, GL_FRAGMENT_SHADER, fragmentShaderName, shaderProgram);
+        name = glCreateProgram();
+        addShader(&vertexShader, GL_VERTEX_SHADER, vertexShaderName, name);
+        addShader(&fragmentShader, GL_FRAGMENT_SHADER, fragmentShaderName, name);
 
-        glLinkProgram(shaderProgram);
+        glLinkProgram(name);
 
         GLint success;
-        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+        glGetProgramiv(name, GL_LINK_STATUS, &success);
         if (success == 0) {
             GLchar errorLog[1024];
-            glGetProgramInfoLog(shaderProgram, sizeof(errorLog), NULL, errorLog);
+            glGetProgramInfoLog(name, sizeof(errorLog), NULL, errorLog);
             cout << "Error linking shader program: " << errorLog << endl;
             return false;
         }
 
-        glValidateProgram(shaderProgram);
+        glValidateProgram(name);
         return true;
     }
 
-    GLuint getShaderProgram()
+    GLuint getName()
     {
-        return shaderProgram;
+        return name;
     }
 };
 #endif // HPP_SHADERHANDLER
