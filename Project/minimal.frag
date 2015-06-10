@@ -1,7 +1,7 @@
-#version 420
+#version 330
 
-layout (location = 0) in vec3 normal;
-layout (location = 1) in vec2 texCoords;
+in vec3 normal;
+in vec2 texCoords;
 
 uniform sampler2D textureSampler;
 
