@@ -9,9 +9,6 @@
 
 /**
  @brief Loads 2D textures from files into OpenGL.
-
- @author Dirk Schut
- @since 8-6-2015
 */
 class Texture
 {

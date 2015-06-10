@@ -4,9 +4,6 @@
 
 /**
  @brief Contains the data of one vertex.
-
- @author Dirk Schut
- @since 4-6-2015
 */
 struct Vertex
 {

@@ -119,6 +119,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    const char* version = (const char*)glGetString(GL_VERSION);
+    cout << "OpenGL Version:" << version << endl;
+
     if (!glewIsSupported("GL_VERSION_4_2"))
     {
         cout << "GLEW version out of date: please update your videocard driver" << endl;

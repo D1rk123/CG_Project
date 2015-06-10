@@ -46,12 +46,14 @@
 			<Add library="glu32" />
 			<Add library="winmm" />
 			<Add library="gdi32" />
+			<Add library="DevIL" />
 			<Add directory="../Libraries/Freeglut/lib" />
 			<Add directory="../Libraries/glew-1.10.0/lib" />
 			<Add directory="../Libraries/DevIL-x86-1.7.8/lib" />
 		</Linker>
 		<Unit filename="Mesh.hpp" />
-		<Unit filename="ShaderHandler.hpp" />
+		<Unit filename="ShaderProgram.hpp" />
+		<Unit filename="Texture.hpp" />
 		<Unit filename="Vertex.hpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="minimal.frag" />
