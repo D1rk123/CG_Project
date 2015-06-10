@@ -33,7 +33,7 @@ static void resize(int width, int height)
     const float ar = (float) width / (float) height;
 
     cameraMat = glm::perspective(75.0f, ar, 0.1f, 100.f);
-    cameraMat = glm::translate(cameraMat, vec3(0.0f, -0.5f, -5.0f));
+    cameraMat = glm::translate(cameraMat, vec3(0.0f, -0.5f, -15.0f));
 
     glViewport(0, 0, width, height);
 }
@@ -85,6 +85,10 @@ static void display(void)
 
 static void key(unsigned char key, int x, int y)
 {
+    //empty if statement to remove unused argument warning
+    if(x == y)
+    {
+    }
     switch (key)
     {
         case 'q':
@@ -151,7 +155,7 @@ int main(int argc, char *argv[])
     glDepthFunc(GL_LESS);
 
     //Make a cube Mesh
-    mesh.loadOBJ("models/Satellite1.obj");
+    mesh.loadOBJ("models/testUnit.obj", true);
     //Load a texture
     texture.load("FlappyBirdTexture.png");
     //Set up shaders

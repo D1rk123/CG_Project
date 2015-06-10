@@ -29,18 +29,12 @@ class Mesh {
         return indicesCount;
     }
 
-    bool loadOBJ(
-        const char * path
-    )
+    bool loadOBJ(const char * path, bool hasTexture)
     {
         std::vector < unsigned int > vertexIndices, uvIndices, normalIndices;
         std::vector < glm::vec3 > temp_vertices;
         std::vector < glm::vec2 > temp_uvs;
         std::vector < glm::vec3 > temp_normals;
-
-        std::vector < glm::vec3 > out_vertices;
-        std::vector < glm::vec2 > out_uvs;
-        std::vector < glm::vec3 > out_normals;
 
         FILE * file = fopen(path, "r");
         if(file == NULL) {
@@ -70,15 +64,27 @@ class Mesh {
             } else if(strcmp(lineHeader, "f") == 0) {
                 std::string vertex1, vertex2, vertex3;
                 unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
-                int amount = fscanf(file, " %d//%d %d//%d %d//%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2]);
-                if(amount != 6) {
-                    printf("Obj file is invalid for this parser.");
-                    return false;
-                }
-                for( unsigned int i = 0; i < 3; i++) {
-                    vertexIndices.push_back(vertexIndex[i]);
-                    uvIndices.push_back(uvIndex[i]);
-                    normalIndices.push_back(normalIndex[i]);
+                if(hasTexture) {
+                    int amount = fscanf(file, " %d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2]);
+                    if(amount != 9) {
+                        printf("Obj file is invalid for this parser.");
+                        return false;
+                    }
+                    for( unsigned int i = 0; i < 3; i++) {
+                        vertexIndices.push_back(vertexIndex[i]);
+                        uvIndices.push_back(uvIndex[i]);
+                        normalIndices.push_back(normalIndex[i]);
+                    }
+                } else {
+                    int amount = fscanf(file, " %d//%d %d//%d %d//%d\n", &vertexIndex[0], &normalIndex[0], &vertexIndex[1], &normalIndex[1], &vertexIndex[2], &normalIndex[2]);
+                    if(amount != 6) {
+                        printf("Obj file is invalid for this parser.");
+                        return false;
+                    }
+                    for( unsigned int i = 0; i < 3; i++) {
+                        vertexIndices.push_back(vertexIndex[i]);
+                        normalIndices.push_back(normalIndex[i]);
+                    }
                 }
             }
             //else {
@@ -86,31 +92,17 @@ class Mesh {
             //}
         }
 
-        for(unsigned int i = 0; i < vertexIndices.size(); i++) {
-            unsigned int vertexIndex = vertexIndices[i];
-            glm::vec3 vertex = temp_vertices[vertexIndex-1];
-            out_vertices.push_back(vertex);
-        }
-
-        for(unsigned int i = 0; i < uvIndices.size(); i++) {
-            unsigned int vertexUVIndex = uvIndices[i];
-            glm::vec2 vertexUV = temp_uvs[vertexUVIndex-1];
-            out_uvs.push_back(vertexUV);
-        }
-
-        for(unsigned int i = 0; i < normalIndices.size(); i++) {
-            unsigned int vertexNormalIndex = normalIndices[i];
-            glm::vec3 vertexNormal = temp_normals[vertexNormalIndex-1];
-            out_normals.push_back(vertexNormal);
-        }
-
         indicesCount = vertexIndices.size();
 
         Vertex vertices[indicesCount];
         unsigned int faceIndices[indicesCount];
 
-        for(unsigned int i = 0; i < indicesCount; i++) {
-            vertices[i] = Vertex(out_vertices[vertexIndices[i]], out_normals[normalIndices[i]], glm::vec2(0.0, 0.0)); //out_uvs[uvIndices[i]]
+        for(GLsizei i = 0; i < indicesCount; i++) {
+            if(hasTexture) {
+                vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], temp_uvs[uvIndices[i]-1]);
+            } else {
+                vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], glm::vec2(0.0, 0.0));
+            }
             faceIndices[i] = i;
         }
 
