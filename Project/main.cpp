@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
     glDepthFunc(GL_LESS);
 
     //Make a cube Mesh
-    mesh.makeCube(vec3(0.0, 0.0, 0.0), vec3(0.3, 0.6, 0.5));
+    mesh.loadOBJ("models/Satellite1.obj");
     //Load a texture
     texture.load("FlappyBirdTexture.png");
     //Set up shaders
