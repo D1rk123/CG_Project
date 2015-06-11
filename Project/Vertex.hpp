@@ -1,6 +1,8 @@
 #ifndef HPP_VERTEX
 #define HPP_VERTEX
-#include <glm/vec3.hpp>
+#include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 /**
  @brief Contains the data of one vertex.
@@ -20,5 +22,7 @@ struct Vertex
     }
 
 };
+
+std::ostream &operator<<(std::ostream &os, Vertex const &vert);
 
 #endif //HPP_VERTEX

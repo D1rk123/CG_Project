@@ -1,17 +1,15 @@
 #ifndef HPP_MESH
 #define HPP_MESH
 #include <GL/gl.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <stdlib.h>
 #include <vector>
 #include <cstdio>
+#include <math.h>
 #include "Vertex.hpp"
-
-using glm::vec3;
+#include "Geometry.hpp"
 
 /**
- @brief Class for loading Mesh data into the video card
+ @brief Class for loading and accessing geometry in OpenGL
 */
 class Mesh {
     GLuint vbo, ibo;
@@ -29,137 +27,48 @@ class Mesh {
         return indicesCount;
     }
 
-    bool loadOBJ(const char * path, bool hasTexture)
-    {
-        std::vector < unsigned int > vertexIndices, uvIndices, normalIndices;
-        std::vector < glm::vec3 > temp_vertices;
-        std::vector < glm::vec2 > temp_uvs;
-        std::vector < glm::vec3 > temp_normals;
+    void draw() {
+        //Select the mesh vertices
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        //select the vertex positions
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+        //select the normals
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)sizeof(glm::vec3));
+        //select the texture coordinates
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(glm::vec3)*2));
 
-        FILE * file = fopen(path, "r");
-        if(file == NULL) {
-            printf("File is non-existent.");
-            return false;
-        }
+        //select the elements
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        //draw them as triangles
+        glDrawElements(GL_TRIANGLES, indicesCount, GL_UNSIGNED_INT, 0);
 
-        while(1) {
-            char lineHeader[128];
-            int res = fscanf(file, "%s", lineHeader);
-            if(res == EOF) {
-                break;
-            }
+        //disable the vertex attribute arrays, because the next shader we use might not use them
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
+    }
 
-            if(strcmp(lineHeader,"v") == 0) {
-                glm::vec3 vertex;
-                fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z);
-                temp_vertices.push_back(vertex);
-            } else if(strcmp(lineHeader, "vt") == 0) {
-                glm::vec2 vertexUV;
-                fscanf(file, "%f %f\n", &vertexUV.x, &vertexUV.y);
-                temp_uvs.push_back(vertexUV);
-            } else if(strcmp(lineHeader, "vn") == 0) {
-                glm::vec3 vertexNormal;
-                fscanf(file, "%f %f %f\n", &vertexNormal.x, &vertexNormal.y, &vertexNormal.z);
-                temp_normals.push_back(vertexNormal);
-            } else if(strcmp(lineHeader, "f") == 0) {
-                std::string vertex1, vertex2, vertex3;
-                unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
-                if(hasTexture) {
-                    int amount = fscanf(file, " %d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2]);
-                    if(amount != 9) {
-                        printf("Obj file is invalid for this parser.");
-                        return false;
-                    }
-                    for( unsigned int i = 0; i < 3; i++) {
-                        vertexIndices.push_back(vertexIndex[i]);
-                        uvIndices.push_back(uvIndex[i]);
-                        normalIndices.push_back(normalIndex[i]);
-                    }
-                } else {
-                    int amount = fscanf(file, " %d//%d %d//%d %d//%d\n", &vertexIndex[0], &normalIndex[0], &vertexIndex[1], &normalIndex[1], &vertexIndex[2], &normalIndex[2]);
-                    if(amount != 6) {
-                        printf("Obj file is invalid for this parser.");
-                        return false;
-                    }
-                    for( unsigned int i = 0; i < 3; i++) {
-                        vertexIndices.push_back(vertexIndex[i]);
-                        normalIndices.push_back(normalIndex[i]);
-                    }
-                }
-            }
-            //else {
-            //    printf("Found something else than v, vt, vn or f. Problem?");
-            //}
-        }
-
-        indicesCount = vertexIndices.size();
-
-        Vertex vertices[indicesCount];
-        unsigned int faceIndices[indicesCount];
-
-        for(GLsizei i = 0; i < indicesCount; i++) {
-            if(hasTexture) {
-                vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], temp_uvs[uvIndices[i]-1]);
-            } else {
-                vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], glm::vec2(0.0, 0.0));
-            }
-            faceIndices[i] = i;
-        }
-
+    void makeMesh(const Geometry& geom) {
+        indicesCount = geom.getNumIndices();
         //Generate a VBO and store vertex data in it
         glGenBuffers(1, &vbo);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*indicesCount, vertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*geom.getNumVertices(), geom.getVertices(), GL_STATIC_DRAW);
         //Generate a IBO and store triangle index data in it
         glGenBuffers(1, &ibo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indicesCount, faceIndices, GL_STATIC_DRAW);
-
-        return true;
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*geom.getNumIndices(), geom.getIndices(), GL_STATIC_DRAW);
     }
 
-    void makeCube(glm::vec3 lower, glm::vec3 upper)
-    {
-        const GLfloat d = 0.57735026918962576; // 1/sqrt(3), (d, d, d) is a vector with length 1
-        Vertex cubeCorners[] = {
-            Vertex(glm::vec3(lower[0], lower[1], lower[2]), glm::vec3(-d, -d, -d), glm::vec2(0.0, 0.0)),
-            Vertex(glm::vec3(lower[0], upper[1], lower[2]), glm::vec3(-d,  d, -d), glm::vec2(0.0, 1.0)),
-            Vertex(glm::vec3(upper[0], lower[1], lower[2]), glm::vec3( d, -d, -d), glm::vec2(1.0, 0.0)),
-            Vertex(glm::vec3(upper[0], upper[1], lower[2]), glm::vec3( d,  d, -d), glm::vec2(1.0, 1.0)),
-            Vertex(glm::vec3(lower[0], lower[1], upper[2]), glm::vec3(-d, -d,  d), glm::vec2(1.0, 0.0)),
-            Vertex(glm::vec3(lower[0], upper[1], upper[2]), glm::vec3(-d,  d,  d), glm::vec2(1.0, 1.0)),
-            Vertex(glm::vec3(upper[0], lower[1], upper[2]), glm::vec3( d, -d,  d), glm::vec2(0.0, 0.0)),
-            Vertex(glm::vec3(upper[0], upper[1], upper[2]), glm::vec3( d,  d,  d), glm::vec2(0.0, 1.0))
-        };
-        unsigned int cubeIndices[] = {
-            2, 1, 0, //back side
-            1, 2, 3,
-            4, 5, 6, //front side
-            7, 6, 5,
-            0, 1, 5, //left side
-            0, 5, 4,
-            7, 3, 2, //right side
-            6, 7, 2,
-            7, 5, 1, //top side
-            3, 7, 1,
-            0, 4, 6, //bottom side
-            0, 6, 2
-        };
-        indicesCount = 36;
-
-        //Generate a VBO and store vertex data in it
-        glGenBuffers(1, &vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cubeCorners), cubeCorners, GL_STATIC_DRAW);
-        //Generate a IBO and store triangle index data in it
-        glGenBuffers(1, &ibo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
-    }
-    void removeBuffers()
-    {
+    void remove() {
         glDeleteBuffers(1, &vbo);
         glDeleteBuffers(1, &ibo);
+    }
+    ~Mesh() {
+        remove();
     }
 };
 

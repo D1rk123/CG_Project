@@ -47,7 +47,7 @@ static void display(void)
     glUseProgram(shaderProgram.getName());
 
     //rotate the model
-    cameraMat = glm::rotate(cameraMat, 0.1f, vec3(0,1,0));
+    cameraMat = glm::rotate(cameraMat, 0.01f, vec3(0,1,0));
 
     //send the camera matrix to the shader
     glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
@@ -56,27 +56,7 @@ static void display(void)
     glBindTexture(GL_TEXTURE_2D, texture.getName());
     glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
 
-    //Select the mesh vertices
-    glBindBuffer(GL_ARRAY_BUFFER, mesh.getVBO());
-    //select the vertex positions
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-    //select the normals
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)sizeof(vec3));
-    //select the texture coordinates
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec3)*2));
-
-    //select the elements
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.getIBO());
-    //draw them as triangles
-    glDrawElements(GL_TRIANGLES, mesh.getIndicesCount(), GL_UNSIGNED_INT, 0);
-
-    //disable the vertex attribute arrays, because the next shader we use might not use them
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
+    mesh.draw();
 
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
@@ -151,13 +131,22 @@ int main(int argc, char *argv[])
     //glEnable(GL_CULL_FACE);
     //glCullFace(GL_BACK);
 
+    //uncomment to draw wireframes
+    //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    //Make a cube Mesh
-    mesh.loadOBJ("models/testUnit.obj", true);
+    Geometry geom1 = Geometry();
+    //geom1.loadOBJ("models/testUnit.obj", true);
+    geom1.makeRandomMeteor(15, 15, 12, 0.08f);
+
+    //Make a mesh
+    mesh.makeMesh(geom1);
+
+    geom1.remove();
     //Load a texture
-    texture.load("FlappyBirdTexture.png");
+    texture.load("textures/meteor.jpg");
     //Set up shaders
     shaderProgram.setupShaders(vertexShaderName, fragmentShaderName);
     //Set uniform variable locations
