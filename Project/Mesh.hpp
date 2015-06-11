@@ -3,7 +3,7 @@
 #include <GL/gl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "glm/ext.hpp"
+#include <glm/ext.hpp>
 #include <stdlib.h>
 #include <math.h>
 #include "Vertex.hpp"
@@ -11,6 +11,7 @@
 const double pi = 3.141592653589793238462643383279502884;
 
 using glm::vec3;
+using glm::vec2;
 
 /**
  @brief Class for loading Mesh data into the video card
@@ -76,11 +77,11 @@ class Mesh {
         assert(rings >= 2);
 
         int vertexAmount = (rings-1)*segments+2;
-        int indexAmount = 3*(rings-1)*segments*2;
+        indicesCount = 3*(rings-1)*segments*2;
         Vertex meteorCorners[vertexAmount];
-        unsigned int meteorIndices[indexAmount];
+        unsigned int meteorIndices[indicesCount];
 
-
+        //Calculate vertex positions
         for(int i=1; i<rings; i++) {
             double theta = (double(i)/rings)*pi;
             double sinTheta = sin(theta);
@@ -90,31 +91,54 @@ class Mesh {
                 double sinPhi = sin(phi);
                 double cosPhi = cos(phi);
                 vec3 position = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-                std::cout << glm::to_string(position) << std::endl;
-                meteorCorners[(i-1)*segments+j] = Vertex(position, position, glm::vec2(0,0));
+                //std::cout << glm::to_string(position) << std::endl;
+                meteorCorners[(i-1)*segments+j] = Vertex(position, position, vec2(0,0));
             }
         }
+
+        //Calculate upper and lower ring faces
         int topCorner = (rings-1)*segments;
         int bottomCorner = topCorner+1;
-        meteorCorners[topCorner] = vec3(0,0,1);
-        meteorCorners[bottomCorner] = vec3(0,0,-1);
+        meteorCorners[topCorner] = Vertex(vec3(0,0,1), vec3(0,0,1), vec2(0,0));
+        meteorCorners[bottomCorner] = Vertex(vec3(0,0,-1), vec3(0,0,-1), vec2(0,0));
         for(int i=0; i<segments; i++) {
             meteorIndices[i*3] = topCorner;
-            meteorIndices[i*3+1] = i
+            meteorIndices[i*3+1] = i;
             meteorIndices[i*3+2] = (i+1)%segments;
             meteorIndices[3*segments+i*3] = bottomCorner;
-            meteorIndices[3*segments+i*3+1] = (rings-1)i
-            meteorIndices[3*segments+i*3+2] = (i+1)%segments;
+            meteorIndices[3*segments+i*3+1] = (rings-2)*segments+i;
+            meteorIndices[3*segments+i*3+2] = (rings-2)*segments+((i+1)%segments);
         }
+
+        //calculate faces of other rings
+        for(int i=0; i<rings-2; i++) {
+            int indexOffset = (i+1)*(6*segments);
+            for(int j=0; j<segments; j++) {
+                meteorIndices[indexOffset+j*6+0] = i*segments+j;
+                meteorIndices[indexOffset+j*6+1] = i*segments+(j+1)%segments;
+                meteorIndices[indexOffset+j*6+2] = (i+1)*segments+(j+1)%segments;
+                meteorIndices[indexOffset+j*6+3] = i*segments+j;
+                meteorIndices[indexOffset+j*6+4] = (i+1)*segments+(j+1)%segments;
+                meteorIndices[indexOffset+j*6+5] = (i+1)*segments+j;
+            }
+        }
+
+
+        /*for(int i=0; i<vertexAmount; i++) {
+            std::cout << i << ": " << meteorCorners[i] << std::endl;
+        }
+        for(int i=0; i<indicesCount/3; i++) {
+            std::cout << i << ": " << meteorIndices[i*3] << "/" << meteorIndices[i*3+1] << "/" << meteorIndices[i*3+2] << std::endl;
+        }*/
 
         //Generate a VBO and store vertex data in it
         glGenBuffers(1, &vbo);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cubeCorners), cubeCorners, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*vertexAmount, meteorCorners, GL_STATIC_DRAW);
         //Generate a IBO and store triangle index data in it
         glGenBuffers(1, &ibo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indicesCount, meteorIndices, GL_STATIC_DRAW);
     }
     void removeBuffers()
     {

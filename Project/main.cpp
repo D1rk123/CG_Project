@@ -33,7 +33,7 @@ static void resize(int width, int height)
     const float ar = (float) width / (float) height;
 
     cameraMat = glm::perspective(75.0f, ar, 0.1f, 100.f);
-    cameraMat = glm::translate(cameraMat, vec3(0.0f, -0.5f, -5.0f));
+    cameraMat = glm::translate(cameraMat, vec3(0.0f, -0.5f, -15.0f));
 
     glViewport(0, 0, width, height);
 }
@@ -47,7 +47,7 @@ static void display(void)
     glUseProgram(shaderProgram.getName());
 
     //rotate the model
-    cameraMat = glm::rotate(cameraMat, 0.1f, vec3(0,1,0));
+    cameraMat = glm::rotate(cameraMat, 0.01f, vec3(0,1,0));
 
     //send the camera matrix to the shader
     glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
@@ -151,9 +151,9 @@ int main(int argc, char *argv[])
     glDepthFunc(GL_LESS);
 
     //Make a cube Mesh
-    mesh.makeCube(vec3(0.0, 0.0, 0.0), vec3(0.3, 0.6, 0.5));
+    //mesh.makeCube(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
     //Make a cube Mesh
-    mesh.makeRandomMeteor(3,3);
+    mesh.makeRandomMeteor(30,30);
     //Load a texture
     texture.load("FlappyBirdTexture.png");
     //Set up shaders
