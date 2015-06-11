@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/ext.hpp>
+#include <glm/gtc/random.hpp>
 #include <stdlib.h>
 #include <math.h>
 #include "Vertex.hpp"
@@ -71,55 +72,71 @@ class Mesh {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
     }
 
-    void makeRandomMeteor(int segments, int rings)
-    {
-        assert(segments >= 3);
-        assert(rings >= 2);
+    vec3 calcTranformedPos(vec3 pos, vec3* directions, int numDirections, float noiseLength) {
+        float length = 0.5;
+        for(int k=0; k<numDirections; k++) {
+            float dot = std::max(glm::dot(pos, directions[k]), 0.0f);
+            length += dot*dot*dot*0.5;
+        }
+        return pos*length+glm::ballRand(noiseLength);
+    }
 
-        int vertexAmount = (rings-1)*segments+2;
-        indicesCount = 3*(rings-1)*segments*2;
+    void makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength)
+    {
+        assert(numSeg >= 3);
+        assert(numRing >= 2);
+
+        vec3 directions[numDirections];
+
+        for(int i=0; i<numDirections; i++) {
+            directions[i] = glm::ballRand(1.0f);
+            //std::cout << glm::to_string(directions[i]) << std::endl;
+        }
+
+        int vertexAmount = (numRing-1)*numSeg+2;
+        indicesCount = 3*(numRing-1)*numSeg*2;
         Vertex meteorCorners[vertexAmount];
         unsigned int meteorIndices[indicesCount];
 
         //Calculate vertex positions
-        for(int i=1; i<rings; i++) {
-            double theta = (double(i)/rings)*pi;
+        for(int i=1; i<numRing; i++) {
+            double theta = (double(i)/numRing)*pi;
             double sinTheta = sin(theta);
             double cosTheta = cos(theta);
-            for(int j=0; j<segments; j++) {
-                double phi = (double(j)/segments)*2*pi;
+            for(int j=0; j<numSeg; j++) {
+                double phi = (double(j)/(numSeg-1))*2*pi;
                 double sinPhi = sin(phi);
                 double cosPhi = cos(phi);
                 vec3 position = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-                //std::cout << glm::to_string(position) << std::endl;
-                meteorCorners[(i-1)*segments+j] = Vertex(position, position, vec2(0,0));
+                meteorCorners[(i-1)*numSeg+j] = Vertex(calcTranformedPos(position, directions, numDirections, noiseLength), position, vec2(double(j)/numSeg, double(i)/numRing));
             }
         }
 
         //Calculate upper and lower ring faces
-        int topCorner = (rings-1)*segments;
+        int topCorner = (numRing-1)*numSeg;
         int bottomCorner = topCorner+1;
-        meteorCorners[topCorner] = Vertex(vec3(0,0,1), vec3(0,0,1), vec2(0,0));
-        meteorCorners[bottomCorner] = Vertex(vec3(0,0,-1), vec3(0,0,-1), vec2(0,0));
-        for(int i=0; i<segments; i++) {
+
+        meteorCorners[topCorner] = Vertex(calcTranformedPos(vec3(0,0,1), directions, numDirections, noiseLength), vec3(0,0,1), vec2(0.5f,1.0f));
+        meteorCorners[bottomCorner] = Vertex(calcTranformedPos(vec3(0,0,-1), directions, numDirections, noiseLength), vec3(0,0,-1), vec2(0.5f,0.0f));
+        for(int i=0; i<numSeg; i++) {
             meteorIndices[i*3] = topCorner;
             meteorIndices[i*3+1] = i;
-            meteorIndices[i*3+2] = (i+1)%segments;
-            meteorIndices[3*segments+i*3] = bottomCorner;
-            meteorIndices[3*segments+i*3+1] = (rings-2)*segments+i;
-            meteorIndices[3*segments+i*3+2] = (rings-2)*segments+((i+1)%segments);
+            meteorIndices[i*3+2] = (i+1)%numSeg;
+            meteorIndices[3*numSeg+i*3] = bottomCorner;
+            meteorIndices[3*numSeg+i*3+1] = (numRing-2)*numSeg+i;
+            meteorIndices[3*numSeg+i*3+2] = (numRing-2)*numSeg+((i+1)%numSeg);
         }
 
         //calculate faces of other rings
-        for(int i=0; i<rings-2; i++) {
-            int indexOffset = (i+1)*(6*segments);
-            for(int j=0; j<segments; j++) {
-                meteorIndices[indexOffset+j*6+0] = i*segments+j;
-                meteorIndices[indexOffset+j*6+1] = i*segments+(j+1)%segments;
-                meteorIndices[indexOffset+j*6+2] = (i+1)*segments+(j+1)%segments;
-                meteorIndices[indexOffset+j*6+3] = i*segments+j;
-                meteorIndices[indexOffset+j*6+4] = (i+1)*segments+(j+1)%segments;
-                meteorIndices[indexOffset+j*6+5] = (i+1)*segments+j;
+        for(int i=0; i<numRing-2; i++) {
+            int indexOffset = (i+1)*(6*numSeg);
+            for(int j=0; j<numSeg; j++) {
+                meteorIndices[indexOffset+j*6+0] = i*numSeg+j;
+                meteorIndices[indexOffset+j*6+1] = i*numSeg+(j+1)%numSeg;
+                meteorIndices[indexOffset+j*6+2] = (i+1)*numSeg+(j+1)%numSeg;
+                meteorIndices[indexOffset+j*6+3] = i*numSeg+j;
+                meteorIndices[indexOffset+j*6+4] = (i+1)*numSeg+(j+1)%numSeg;
+                meteorIndices[indexOffset+j*6+5] = (i+1)*numSeg+j;
             }
         }
 

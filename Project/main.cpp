@@ -153,9 +153,9 @@ int main(int argc, char *argv[])
     //Make a cube Mesh
     //mesh.makeCube(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
     //Make a cube Mesh
-    mesh.makeRandomMeteor(30,30);
+    mesh.makeRandomMeteor(15, 15, 12, 0.08f);
     //Load a texture
-    texture.load("FlappyBirdTexture.png");
+    texture.load("textures/meteor.jpg");
     //Set up shaders
     shaderProgram.setupShaders(vertexShaderName, fragmentShaderName);
     //Set uniform variable locations
