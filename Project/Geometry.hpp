@@ -48,6 +48,8 @@ class Geometry {
 
     public:
     void makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength);
+
+    void calculateNormals();
 };
 
 #endif // HPP_GEOMETRY

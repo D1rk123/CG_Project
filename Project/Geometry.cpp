@@ -10,6 +10,8 @@ const double pi = 3.141592653589793238462643383279502884;
 using glm::vec3;
 using glm::vec2;
 using std::vector;
+using std::cout;
+using std::endl;
 
 bool Geometry::loadOBJ(const char * path, bool hasTexture)
 {
@@ -144,8 +146,8 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
         indices[i*3+1] = i;
         indices[i*3+2] = (i+1)%numSeg;
         indices[3*numSeg+i*3] = bottomCorner;
-        indices[3*numSeg+i*3+1] = (numRing-2)*numSeg+i;
-        indices[3*numSeg+i*3+2] = (numRing-2)*numSeg+((i+1)%numSeg);
+        indices[3*numSeg+i*3+1] = (numRing-2)*numSeg+((i+1)%numSeg);
+        indices[3*numSeg+i*3+2] = (numRing-2)*numSeg+i;
     }
 
     //calculate faces of other rings
@@ -153,13 +155,15 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
         int indexOffset = (i+1)*(6*numSeg);
         for(int j=0; j<numSeg; j++) {
             indices[indexOffset+j*6+0] = i*numSeg+j;
-            indices[indexOffset+j*6+1] = i*numSeg+(j+1)%numSeg;
-            indices[indexOffset+j*6+2] = (i+1)*numSeg+(j+1)%numSeg;
+            indices[indexOffset+j*6+1] = (i+1)*numSeg+(j+1)%numSeg;
+            indices[indexOffset+j*6+2] = i*numSeg+(j+1)%numSeg;
             indices[indexOffset+j*6+3] = i*numSeg+j;
-            indices[indexOffset+j*6+4] = (i+1)*numSeg+(j+1)%numSeg;
-            indices[indexOffset+j*6+5] = (i+1)*numSeg+j;
+            indices[indexOffset+j*6+4] = (i+1)*numSeg+j;
+            indices[indexOffset+j*6+5] = (i+1)*numSeg+(j+1)%numSeg;
         }
     }
+
+    calculateNormals();
 
     /*for(int i=0; i<numVertices; i++) {
         std::cout << i << ": " << vertices[i] << std::endl;
@@ -167,4 +171,33 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
     for(int i=0; i<numIndices/3; i++) {
         std::cout << i << ": " << indices[i*3] << "/" << indices[i*3+1] << "/" << indices[i*3+2] << std::endl;
     }*/
+}
+
+void Geometry::calculateNormals() {
+    int numTriangles = numIndices/3;
+    vector<vec3> triangleNormals = vector<vec3>(numTriangles);
+    vector<vector<int> > connected = vector<vector<int> >(numVertices);
+
+    //calculate the normal for each triangle
+    //and add a reference to the normal to each vertex of the same triangle
+    for(int i=0; i<numTriangles; i++) {
+        vec3 edge1 = vertices[indices[i*3]].pos   - vertices[indices[i*3+1]].pos;
+        vec3 edge2 = vertices[indices[i*3+2]].pos - vertices[indices[i*3+1]].pos;
+
+        triangleNormals[i] = glm::normalize(glm::cross(edge2, edge1));
+        //cout << glm::to_string(vertices[i].normal) << endl;
+        connected[indices[i*3]].push_back(i);
+        connected[indices[i*3+1]].push_back(i);
+        connected[indices[i*3+2]].push_back(i);
+    }
+
+    //calculate the normal for each vertex by combining the normals of the connected faces
+    for(int i=0; i<numVertices; i++) {
+        vec3 normal = vec3(0);
+        for(size_t j=0; j<connected[i].size(); j++) {
+            normal += triangleNormals[connected[i][j]];
+        }
+        vertices[i].normal = glm::normalize(normal);
+        //cout << glm::to_string(vertices[i].normal) << endl;
+    }
 }

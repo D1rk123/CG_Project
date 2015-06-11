@@ -128,8 +128,11 @@ int main(int argc, char *argv[])
     glutIdleFunc(idle);
 
     glClearColor(0,0,0,1);
-    //glEnable(GL_CULL_FACE);
-    //glCullFace(GL_BACK);
+
+    //Enable backface culling causing clockwise oriented triangles to not be rendered
+    glFrontFace(GL_CCW);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
     //uncomment to draw wireframes
     //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
