@@ -6,6 +6,7 @@
 #include "Geometry.hpp"
 
 const double pi = 3.141592653589793238462643383279502884;
+const double epsilon = 0.0001;
 
 using glm::vec3;
 using glm::vec2;
@@ -114,7 +115,7 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
         directions[i] = glm::ballRand(1.0f);
     }
 
-    numVertices = (numRing-1)*numSeg+2;
+    numVertices = (numRing-1)*(numSeg+1)+2;
     numIndices = 3*(numRing-1)*numSeg*2;
     vertices = new Vertex[numVertices];
     indices = new unsigned int[numIndices];
@@ -124,17 +125,18 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
         double theta = (double(i)/numRing)*pi;
         double sinTheta = sin(theta);
         double cosTheta = cos(theta);
-        for(int j=0; j<numSeg; j++) {
-            double phi = (double(j)/(numSeg-1))*2*pi;
+        for(int j=0; j<(numSeg+1); j++) {
+            double phi = (double(j)/numSeg)*2*pi;
             double sinPhi = sin(phi);
             double cosPhi = cos(phi);
             vec3 position = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-            vertices[(i-1)*numSeg+j] = Vertex(calcTranformedPos(position, directions, numDirections, noiseLength), position, vec2(double(j)/numSeg, double(i)/numRing));
+            vertices[(i-1)*(numSeg+1)+j] = Vertex(calcTranformedPos(position, directions, numDirections, noiseLength), position, vec2(double(j)/(numSeg+1), double(i)/numRing));
         }
+        vertices[(i-1)*(numSeg+1)+numSeg].pos = vertices[(i-1)*(numSeg+1)].pos;
     }
 
     //Calculate upper and lower ring faces
-    int topCorner = (numRing-1)*numSeg;
+    int topCorner = (numRing-1)*(numSeg+1);
     int bottomCorner = topCorner+1;
 
     vertices[topCorner] =    Vertex(calcTranformedPos(vec3(0,0,1), directions, numDirections, noiseLength),
@@ -144,22 +146,22 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
     for(int i=0; i<numSeg; i++) {
         indices[i*3] = topCorner;
         indices[i*3+1] = i;
-        indices[i*3+2] = (i+1)%numSeg;
+        indices[i*3+2] = i+1;
         indices[3*numSeg+i*3] = bottomCorner;
-        indices[3*numSeg+i*3+1] = (numRing-2)*numSeg+((i+1)%numSeg);
-        indices[3*numSeg+i*3+2] = (numRing-2)*numSeg+i;
+        indices[3*numSeg+i*3+1] = (numRing-2)*(numSeg+1)+i+1;
+        indices[3*numSeg+i*3+2] = (numRing-2)*(numSeg+1)+i;
     }
 
     //calculate faces of other rings
     for(int i=0; i<numRing-2; i++) {
-        int indexOffset = (i+1)*(6*numSeg);
+        int indexOffset = (i+1)*(6*((numSeg+1)-1));
         for(int j=0; j<numSeg; j++) {
-            indices[indexOffset+j*6+0] = i*numSeg+j;
-            indices[indexOffset+j*6+1] = (i+1)*numSeg+(j+1)%numSeg;
-            indices[indexOffset+j*6+2] = i*numSeg+(j+1)%numSeg;
-            indices[indexOffset+j*6+3] = i*numSeg+j;
-            indices[indexOffset+j*6+4] = (i+1)*numSeg+j;
-            indices[indexOffset+j*6+5] = (i+1)*numSeg+(j+1)%numSeg;
+            indices[indexOffset+j*6+0] = i*(numSeg+1)+j;
+            indices[indexOffset+j*6+1] = (i+1)*(numSeg+1)+j+1;
+            indices[indexOffset+j*6+2] = i*(numSeg+1)+j+1;
+            indices[indexOffset+j*6+3] = i*(numSeg+1)+j;
+            indices[indexOffset+j*6+4] = (i+1)*(numSeg+1)+j;
+            indices[indexOffset+j*6+5] = (i+1)*(numSeg+1)+j+1;
         }
     }
 
@@ -185,7 +187,6 @@ void Geometry::calculateNormals() {
         vec3 edge2 = vertices[indices[i*3+2]].pos - vertices[indices[i*3+1]].pos;
 
         triangleNormals[i] = glm::normalize(glm::cross(edge2, edge1));
-        //cout << glm::to_string(vertices[i].normal) << endl;
         connected[indices[i*3]].push_back(i);
         connected[indices[i*3+1]].push_back(i);
         connected[indices[i*3+2]].push_back(i);

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
+#include <ctime>
 #include <GL/glew.h>
 #ifdef __APPLE__
 #include <GLUT/glut.h>
@@ -131,7 +132,7 @@ int main(int argc, char *argv[])
 
     //Enable backface culling causing clockwise oriented triangles to not be rendered
     glFrontFace(GL_CCW);
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
     //uncomment to draw wireframes
@@ -140,9 +141,13 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    //seed the random number generator
+    srand(time(0));
+
     Geometry geom1 = Geometry();
     //geom1.loadOBJ("models/testUnit.obj", true);
-    geom1.makeRandomMeteor(15, 15, 12, 0.08f);
+    geom1.makeRandomMeteor(15,15,12,0.08f);
+    //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
 
     //Make a mesh
     mesh.makeMesh(geom1);
