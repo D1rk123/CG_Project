@@ -46,10 +46,12 @@ class Geometry {
     protected:
     glm::vec3 calcTranformedPos(glm::vec3 pos, glm::vec3* directions, int numDirections, float noiseLength);
 
+    glm::vec3 calcTriangleNormal(GLuint* indices);
+
     public:
     void makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength);
 
-    void calculateNormals();
+    //void calculateNormals();
 };
 
 #endif // HPP_GEOMETRY

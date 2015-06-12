@@ -103,6 +103,13 @@ glm::vec3 Geometry::calcTranformedPos(vec3 pos, vec3* directions, int numDirecti
     return pos*length+glm::ballRand(noiseLength);
 }
 
+glm::vec3 Geometry::calcTriangleNormal(GLuint* indices) {
+    vec3 edge1 = vertices[indices[0]].pos   - vertices[indices[1]].pos;
+    vec3 edge2 = vertices[indices[2]].pos - vertices[indices[1]].pos;
+
+    return glm::normalize(glm::cross(edge2, edge1));
+}
+
 void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength)
 {
     assert(numSeg >= 3);
@@ -130,7 +137,7 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
             double sinPhi = sin(phi);
             double cosPhi = cos(phi);
             vec3 position = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-            vertices[(i-1)*(numSeg+1)+j] = Vertex(calcTranformedPos(position, directions, numDirections, noiseLength), position, vec2(double(j)/(numSeg+1), double(i)/numRing));
+            vertices[(i-1)*(numSeg+1)+j] = Vertex(calcTranformedPos(position, directions, numDirections, noiseLength), position, vec2(double(j)/numSeg, double(i)/numRing));
         }
         vertices[(i-1)*(numSeg+1)+numSeg].pos = vertices[(i-1)*(numSeg+1)].pos;
     }
@@ -143,14 +150,33 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
                                     vec3(0,0,1), vec2(0.5f,1.0f));
     vertices[bottomCorner] = Vertex(calcTranformedPos(vec3(0,0,-1), directions, numDirections, noiseLength),
                                     vec3(0,0,-1), vec2(0.5f,0.0f));
+
+    int numTriangles = numIndices/3;
+    vector<vec3> triangleNormals = vector<vec3>();
+    triangleNormals.reserve(numTriangles);
+    vector<vector<int> > connected = vector<vector<int> >(numVertices);
+
     for(int i=0; i<numSeg; i++) {
+        //Make top ring triangles
         indices[i*3] = topCorner;
         indices[i*3+1] = i;
         indices[i*3+2] = i+1;
+        connected[topCorner].push_back(i);
+        connected[i        ].push_back(i);
+        connected[i+1      ].push_back(i);
+        //Make bottom ring triangles
         indices[3*numSeg+i*3] = bottomCorner;
         indices[3*numSeg+i*3+1] = (numRing-2)*(numSeg+1)+i+1;
         indices[3*numSeg+i*3+2] = (numRing-2)*(numSeg+1)+i;
+        connected[bottomCorner].push_back(numSeg+i);
+        connected[(numRing-2)*(numSeg+1)+i+1].push_back(numSeg+i);
+        connected[(numRing-2)*(numSeg+1)+i  ].push_back(numSeg+i);
     }
+    //store the connections of the right most vertices to the left most triangles and vice versa
+    connected[0].push_back(numSeg-1);
+    connected[numSeg-1].push_back(0);
+    connected[numSeg].push_back(2*numSeg-1);
+    connected[2*numSeg-1].push_back(numSeg);
 
     //calculate faces of other rings
     for(int i=0; i<numRing-2; i++) {
@@ -159,13 +185,38 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
             indices[indexOffset+j*6+0] = i*(numSeg+1)+j;
             indices[indexOffset+j*6+1] = (i+1)*(numSeg+1)+j+1;
             indices[indexOffset+j*6+2] = i*(numSeg+1)+j+1;
+            connected[i*(numSeg+1)+j      ].push_back((indexOffset+j*6)/3);
+            connected[(i+1)*(numSeg+1)+j+1].push_back((indexOffset+j*6)/3);
+            connected[i*(numSeg+1)+j+1    ].push_back((indexOffset+j*6)/3);
+
             indices[indexOffset+j*6+3] = i*(numSeg+1)+j;
             indices[indexOffset+j*6+4] = (i+1)*(numSeg+1)+j;
             indices[indexOffset+j*6+5] = (i+1)*(numSeg+1)+j+1;
+            connected[i*(numSeg+1)+j      ].push_back((indexOffset+j*6)/3+1);
+            connected[(i+1)*(numSeg+1)+j  ].push_back((indexOffset+j*6)/3+1);
+            connected[(i+1)*(numSeg+1)+j+1].push_back((indexOffset+j*6)/3+1);
         }
+        //store the connections of the right most vertices to the left most triangles and vice versa
+        connected[i*(numSeg+1)].push_back((indexOffset+(numSeg-1)*6)/3);
+        connected[(i+1)*(numSeg+1)].push_back((indexOffset+(numSeg-1)*6)/3);
+        connected[i*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset/3);
+        connected[(i+1)*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset/3);
+
     }
 
-    calculateNormals();
+    for(int i=0; i<numTriangles; i++) {
+        triangleNormals[i] = calcTriangleNormal(&indices[i*3]);
+    }
+
+    //calculate the normal for each vertex by combining the normals of the connected faces
+    for(int i=0; i<numVertices; i++) {
+        vec3 normal = vec3(0);
+        for(size_t j=0; j<connected[i].size(); j++) {
+            normal += triangleNormals[connected[i][j]];
+        }
+        vertices[i].normal = glm::normalize(normal);
+        //cout << glm::to_string(vertices[i].normal) << endl;
+    }
 
     /*for(int i=0; i<numVertices; i++) {
         std::cout << i << ": " << vertices[i] << std::endl;
@@ -175,7 +226,7 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
     }*/
 }
 
-void Geometry::calculateNormals() {
+/*void Geometry::calculateNormals() {
     int numTriangles = numIndices/3;
     vector<vec3> triangleNormals = vector<vec3>(numTriangles);
     vector<vector<int> > connected = vector<vector<int> >(numVertices);
@@ -183,10 +234,7 @@ void Geometry::calculateNormals() {
     //calculate the normal for each triangle
     //and add a reference to the normal to each vertex of the same triangle
     for(int i=0; i<numTriangles; i++) {
-        vec3 edge1 = vertices[indices[i*3]].pos   - vertices[indices[i*3+1]].pos;
-        vec3 edge2 = vertices[indices[i*3+2]].pos - vertices[indices[i*3+1]].pos;
-
-        triangleNormals[i] = glm::normalize(glm::cross(edge2, edge1));
+        triangleNormals[i] = calcTriangleNormal(&indices[i*3]);
         connected[indices[i*3]].push_back(i);
         connected[indices[i*3+1]].push_back(i);
         connected[indices[i*3+2]].push_back(i);
@@ -201,4 +249,4 @@ void Geometry::calculateNormals() {
         vertices[i].normal = glm::normalize(normal);
         //cout << glm::to_string(vertices[i].normal) << endl;
     }
-}
+}*/
