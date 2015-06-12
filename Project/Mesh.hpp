@@ -12,10 +12,15 @@
  @brief Class for loading and accessing geometry in OpenGL
 */
 class Mesh {
-    GLuint vbo, ibo;
+    GLuint vbo, ibo, orientationMatrixLocation;
     GLsizei indicesCount;
+    glm::mat4 orientation;
 
     public:
+    Mesh(){
+        orientation = glm::mat4(1.0f);
+    }
+
     GLuint getVBO() {
         return vbo;
     }
@@ -26,8 +31,18 @@ class Mesh {
     GLsizei getIndicesCount() {
         return indicesCount;
     }
+    void transform(const glm::mat4& transformation) {
+        orientation = orientation * transformation;
+    }
+    void setOrientation(const glm::mat4& newOrientation) {
+        orientation = newOrientation;
+    }
+
 
     void draw() {
+        glm::mat4 invertedOrientation = glm::inverse(orientation);
+        //send the orientation matrix to the shader
+        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(invertedOrientation));
         //Select the mesh vertices
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         //select the vertex positions
@@ -51,7 +66,7 @@ class Mesh {
         glDisableVertexAttribArray(2);
     }
 
-    void makeMesh(const Geometry& geom) {
+    void makeMesh(const Geometry& geom, GLuint orientationMatrixLocation) {
         indicesCount = geom.getNumIndices();
         //Generate a VBO and store vertex data in it
         glGenBuffers(1, &vbo);
@@ -61,6 +76,8 @@ class Mesh {
         glGenBuffers(1, &ibo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*geom.getNumIndices(), geom.getIndices(), GL_STATIC_DRAW);
+
+        this->orientationMatrixLocation = orientationMatrixLocation;
     }
 
     void remove() {
