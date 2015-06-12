@@ -147,9 +147,9 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
     int bottomCorner = topCorner+1;
 
     vertices[topCorner] =    Vertex(calcTranformedPos(vec3(0,0,1), directions, numDirections, noiseLength),
-                                    vec3(0,0,1), vec2(0.5f,1.0f));
+                                    vec3(0,0,1), vec2(0.5f,0.0f));
     vertices[bottomCorner] = Vertex(calcTranformedPos(vec3(0,0,-1), directions, numDirections, noiseLength),
-                                    vec3(0,0,-1), vec2(0.5f,0.0f));
+                                    vec3(0,0,-1), vec2(0.5f,1.0f));
 
     int numTriangles = numIndices/3;
     vector<vec3> triangleNormals = vector<vec3>();
