@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 #include <IL/il.h>
 #include "Mesh.hpp"
 #include "ShaderProgram.hpp"
@@ -26,7 +27,7 @@ ShaderProgram shaderProgram = ShaderProgram();
 Mesh mesh = Mesh();
 Texture texture = Texture();
 mat4 cameraMat = mat4();
-GLuint matrixLocation, samplerLocation;
+GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -48,10 +49,10 @@ static void display(void)
     glUseProgram(shaderProgram.getName());
 
     //rotate the model
-    cameraMat = glm::rotate(cameraMat, 0.01f, vec3(0,1,0));
+    mesh.transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
 
     //send the camera matrix to the shader
-    glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
+    glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
     //send the texture selection to the shader
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture.getName());
@@ -141,6 +142,16 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    //Set up shaders
+    shaderProgram.setupShaders(vertexShaderName, fragmentShaderName);
+    //Set uniform variable locations
+    cameraMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "camera");
+    assert(cameraMatrixLocation != 0xFFFFFFFF);
+    samplerLocation = glGetUniformLocation(shaderProgram.getName(), "textureSampler");
+    assert(samplerLocation != 0xFFFFFFFF);
+    orientationMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "orientation");
+    assert(orientationMatrixLocation != 0xFFFFFFFF);
+
     //seed the random number generator
     srand(time(0));
 
@@ -150,18 +161,15 @@ int main(int argc, char *argv[])
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
 
     //Make a mesh
-    mesh.makeMesh(geom1);
+    mesh.makeMesh(geom1, orientationMatrixLocation);
 
+    //clear geometry memory, because it had been copied to the video card
     geom1.remove();
+
+    mesh.transform( glm::translate( vec3(1.0f,0.0f,0.0f) ) );
+
     //Load a texture
     texture.load("textures/meteor.jpg");
-    //Set up shaders
-    shaderProgram.setupShaders(vertexShaderName, fragmentShaderName);
-    //Set uniform variable locations
-    matrixLocation = glGetUniformLocation(shaderProgram.getName(), "camera");
-    assert(matrixLocation != 0xFFFFFFFF);
-    samplerLocation = glGetUniformLocation(shaderProgram.getName(), "textureSampler");
-    assert(samplerLocation != 0xFFFFFFFF);
 
     //Start the GLUT loop
     glutMainLoop();
