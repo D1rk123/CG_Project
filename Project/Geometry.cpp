@@ -94,15 +94,6 @@ bool Geometry::loadOBJ(const char * path, bool hasTexture)
     return true;
 }
 
-glm::vec3 Geometry::calcTranformedPos(vec3 pos, vec3* directions, int numDirections, float noiseLength) {
-    float length = 0.5;
-    for(int k=0; k<numDirections; k++) {
-        float dot = std::max(glm::dot(pos, directions[k]), 0.0f);
-        length += dot*dot*dot*0.5;
-    }
-    return pos*length+glm::ballRand(noiseLength);
-}
-
 glm::vec3 Geometry::calcTriangleNormal(GLuint* indices) {
     vec3 edge1 = vertices[indices[0]].pos   - vertices[indices[1]].pos;
     vec3 edge2 = vertices[indices[2]].pos - vertices[indices[1]].pos;
@@ -110,22 +101,25 @@ glm::vec3 Geometry::calcTriangleNormal(GLuint* indices) {
     return glm::normalize(glm::cross(edge2, edge1));
 }
 
-void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength)
+void Geometry::addTriangleAndConnections(GLuint triangle, GLuint vert1, GLuint vert2, GLuint vert3) {
+    indices[triangle*3] = vert1;
+    indices[triangle*3+1] = vert2;
+    indices[triangle*3+2] = vert3;
+    vertToTriConnections[vert1].push_back(triangle);
+    vertToTriConnections[vert2].push_back(triangle);
+    vertToTriConnections[vert3].push_back(triangle);
+}
+
+void Geometry::makeSphere(int numSeg, int numRing)
 {
     assert(numSeg >= 3);
     assert(numRing >= 2);
-
-    vec3 directions[numDirections];
-
-    //generate random vectors to extrude in that direction
-    for(int i=0; i<numDirections; i++) {
-        directions[i] = glm::ballRand(1.0f);
-    }
 
     numVertices = (numRing-1)*(numSeg+1)+2;
     numIndices = 3*(numRing-1)*numSeg*2;
     vertices = new Vertex[numVertices];
     indices = new unsigned int[numIndices];
+    vertToTriConnections = vector<vector<int> >(numVertices);
 
     //Calculate vertex positions
     for(int i=1; i<numRing; i++) {
@@ -137,85 +131,42 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
             double sinPhi = sin(phi);
             double cosPhi = cos(phi);
             vec3 position = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-            vertices[(i-1)*(numSeg+1)+j] = Vertex(calcTranformedPos(position, directions, numDirections, noiseLength), position, vec2(double(j)/numSeg, double(i)/numRing));
+            vertices[(i-1)*(numSeg+1)+j] = Vertex(position, position, vec2(double(j)/numSeg, double(i)/numRing));
         }
-        vertices[(i-1)*(numSeg+1)+numSeg].pos = vertices[(i-1)*(numSeg+1)].pos;
     }
 
     //Calculate upper and lower ring faces
     int topCorner = (numRing-1)*(numSeg+1);
     int bottomCorner = topCorner+1;
 
-    vertices[topCorner] =    Vertex(calcTranformedPos(vec3(0,0,1), directions, numDirections, noiseLength),
-                                    vec3(0,0,1), vec2(0.5f,0.0f));
-    vertices[bottomCorner] = Vertex(calcTranformedPos(vec3(0,0,-1), directions, numDirections, noiseLength),
-                                    vec3(0,0,-1), vec2(0.5f,1.0f));
-
-    int numTriangles = numIndices/3;
-    vector<vec3> triangleNormals = vector<vec3>();
-    triangleNormals.reserve(numTriangles);
-    vector<vector<int> > connected = vector<vector<int> >(numVertices);
+    vertices[topCorner] =    Vertex(vec3(0,0,1), vec3(0,0,1), vec2(0.5f,0.0f));
+    vertices[bottomCorner] = Vertex(vec3(0,0,-1), vec3(0,0,-1), vec2(0.5f,1.0f));
 
     for(int i=0; i<numSeg; i++) {
         //Make top ring triangles
-        indices[i*3] = topCorner;
-        indices[i*3+1] = i;
-        indices[i*3+2] = i+1;
-        connected[topCorner].push_back(i);
-        connected[i        ].push_back(i);
-        connected[i+1      ].push_back(i);
+        addTriangleAndConnections(i, topCorner, i, i+1);
         //Make bottom ring triangles
-        indices[3*numSeg+i*3] = bottomCorner;
-        indices[3*numSeg+i*3+1] = (numRing-2)*(numSeg+1)+i+1;
-        indices[3*numSeg+i*3+2] = (numRing-2)*(numSeg+1)+i;
-        connected[bottomCorner].push_back(numSeg+i);
-        connected[(numRing-2)*(numSeg+1)+i+1].push_back(numSeg+i);
-        connected[(numRing-2)*(numSeg+1)+i  ].push_back(numSeg+i);
+        addTriangleAndConnections(numSeg+i, bottomCorner, (numRing-2)*(numSeg+1)+i+1, (numRing-2)*(numSeg+1)+i);
     }
     //store the connections of the right most vertices to the left most triangles and vice versa
-    connected[0].push_back(numSeg-1);
-    connected[numSeg-1].push_back(0);
-    connected[numSeg].push_back(2*numSeg-1);
-    connected[2*numSeg-1].push_back(numSeg);
+    vertToTriConnections[0].push_back(numSeg-1);
+    vertToTriConnections[numSeg-1].push_back(0);
+    vertToTriConnections[numSeg].push_back(2*numSeg-1);
+    vertToTriConnections[2*numSeg-1].push_back(numSeg);
 
     //calculate faces of other rings
     for(int i=0; i<numRing-2; i++) {
-        int indexOffset = (i+1)*(6*((numSeg+1)-1));
+        int indexOffset = (i+1)*(2*((numSeg+1)-1));
         for(int j=0; j<numSeg; j++) {
-            indices[indexOffset+j*6+0] = i*(numSeg+1)+j;
-            indices[indexOffset+j*6+1] = (i+1)*(numSeg+1)+j+1;
-            indices[indexOffset+j*6+2] = i*(numSeg+1)+j+1;
-            connected[i*(numSeg+1)+j      ].push_back((indexOffset+j*6)/3);
-            connected[(i+1)*(numSeg+1)+j+1].push_back((indexOffset+j*6)/3);
-            connected[i*(numSeg+1)+j+1    ].push_back((indexOffset+j*6)/3);
-
-            indices[indexOffset+j*6+3] = i*(numSeg+1)+j;
-            indices[indexOffset+j*6+4] = (i+1)*(numSeg+1)+j;
-            indices[indexOffset+j*6+5] = (i+1)*(numSeg+1)+j+1;
-            connected[i*(numSeg+1)+j      ].push_back((indexOffset+j*6)/3+1);
-            connected[(i+1)*(numSeg+1)+j  ].push_back((indexOffset+j*6)/3+1);
-            connected[(i+1)*(numSeg+1)+j+1].push_back((indexOffset+j*6)/3+1);
+            addTriangleAndConnections(indexOffset+2*j, i*(numSeg+1)+j, (i+1)*(numSeg+1)+j+1, i*(numSeg+1)+j+1);
+            addTriangleAndConnections(indexOffset+2*j+1, i*(numSeg+1)+j, (i+1)*(numSeg+1)+j, (i+1)*(numSeg+1)+j+1);
         }
         //store the connections of the right most vertices to the left most triangles and vice versa
-        connected[i*(numSeg+1)].push_back((indexOffset+(numSeg-1)*6)/3);
-        connected[(i+1)*(numSeg+1)].push_back((indexOffset+(numSeg-1)*6)/3);
-        connected[i*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset/3);
-        connected[(i+1)*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset/3);
+        vertToTriConnections[i*(numSeg+1)].push_back(indexOffset+(numSeg-1)*2);
+        vertToTriConnections[(i+1)*(numSeg+1)].push_back(indexOffset+(numSeg-1)*2);
+        vertToTriConnections[i*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset);
+        vertToTriConnections[(i+1)*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset);
 
-    }
-
-    for(int i=0; i<numTriangles; i++) {
-        triangleNormals[i] = calcTriangleNormal(&indices[i*3]);
-    }
-
-    //calculate the normal for each vertex by combining the normals of the connected faces
-    for(int i=0; i<numVertices; i++) {
-        vec3 normal = vec3(0);
-        for(size_t j=0; j<connected[i].size(); j++) {
-            normal += triangleNormals[connected[i][j]];
-        }
-        vertices[i].normal = glm::normalize(normal);
-        //cout << glm::to_string(vertices[i].normal) << endl;
     }
 
     /*for(int i=0; i<numVertices; i++) {
@@ -226,27 +177,72 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
     }*/
 }
 
-/*void Geometry::calculateNormals() {
+glm::vec3 Geometry::calcTranformedPos(vec3 pos, vec3* directions, int numDirections, float noiseLength) {
+    float length = 0.5;
+    for(int k=0; k<numDirections; k++) {
+        float dot = std::max(glm::dot(pos, directions[k]), 0.0f);
+        length += dot*dot*dot*0.5;
+    }
+    return pos*length+glm::ballRand(noiseLength);
+}
+
+void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength) {
+    //Start off with a sphere
+    makeSphere(numSeg, numRing);
+
+    //generate random vectors to extrude in those directions
+    vec3 directions[numDirections];
+    for(int i=0; i<numDirections; i++) {
+        directions[i] = glm::ballRand(1.0f);
+    }
+
+    //transform all vertices of the sphere
+    for(int i=0; i<numVertices; i++) {
+        vertices[i].pos = calcTranformedPos(vertices[i].pos, directions, numDirections, noiseLength);
+    }
+
+    //Attach the vertices of the seam by giving them the same position
+    for(int i=1; i<numRing; i++) {
+        vertices[(i-1)*(numSeg+1)+numSeg].pos = vertices[(i-1)*(numSeg+1)].pos;
+    }
+
+    calculateNormals();
+}
+
+void Geometry::calculateConnections() {
+    int numTriangles = numIndices/3;
+    vertToTriConnections = vector<vector<int> >(numVertices);
+    for(int i=0; i<numTriangles; i++) {
+        vertToTriConnections[indices[i*3]].push_back(i);
+        vertToTriConnections[indices[i*3+1]].push_back(i);
+        vertToTriConnections[indices[i*3+2]].push_back(i);
+    }
+}
+
+void Geometry::calculateNormals() {
     int numTriangles = numIndices/3;
     vector<vec3> triangleNormals = vector<vec3>(numTriangles);
-    vector<vector<int> > connected = vector<vector<int> >(numVertices);
+
+    //If not yet calculated, calculate which vertices connect to which triangles
+    if(vertToTriConnections.size() == 0) {
+        calculateConnections();
+    }
 
     //calculate the normal for each triangle
     //and add a reference to the normal to each vertex of the same triangle
     for(int i=0; i<numTriangles; i++) {
         triangleNormals[i] = calcTriangleNormal(&indices[i*3]);
-        connected[indices[i*3]].push_back(i);
-        connected[indices[i*3+1]].push_back(i);
-        connected[indices[i*3+2]].push_back(i);
     }
 
     //calculate the normal for each vertex by combining the normals of the connected faces
     for(int i=0; i<numVertices; i++) {
         vec3 normal = vec3(0);
-        for(size_t j=0; j<connected[i].size(); j++) {
-            normal += triangleNormals[connected[i][j]];
+        for(size_t j=0; j<vertToTriConnections[i].size(); j++) {
+            normal += triangleNormals[vertToTriConnections[i][j]];
         }
         vertices[i].normal = glm::normalize(normal);
         //cout << glm::to_string(vertices[i].normal) << endl;
     }
-}*/
+}
+
+BoundingSphere calcBoundingSphere();
