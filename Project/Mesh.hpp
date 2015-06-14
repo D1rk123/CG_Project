@@ -7,6 +7,7 @@
 #include <math.h>
 #include "Vertex.hpp"
 #include "Geometry.hpp"
+#include "BoundingEllipsoid.hpp"
 
 /**
  @brief Class for loading and accessing geometry in OpenGL
@@ -15,10 +16,14 @@ class Mesh {
     GLuint vbo, ibo, orientationMatrixLocation;
     GLsizei indicesCount;
     glm::mat4 orientation;
+    BoundingEllipsoid ellip;
 
     public:
     Mesh(){
         orientation = glm::mat4(1.0f);
+    }
+    Mesh(const Geometry& geom){
+        makeMesh(geom);
     }
 
     GLuint getVBO() {
@@ -26,6 +31,9 @@ class Mesh {
     }
     GLuint getIBO() {
         return ibo;
+    }
+    const BoundingEllipsoid& getEllip() {
+        return ellip;
     }
 
     GLsizei getIndicesCount() {
@@ -76,14 +84,13 @@ class Mesh {
         glGenBuffers(1, &ibo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*geom.getNumIndices(), geom.getIndices(), GL_STATIC_DRAW);
+
+        ellip = geom.approxBoundingEllipsoid();
     }
 
     void remove() {
         glDeleteBuffers(1, &vbo);
         glDeleteBuffers(1, &ibo);
-    }
-    ~Mesh() {
-        remove();
     }
 };
 

@@ -247,7 +247,7 @@ void Geometry::calculateNormals() {
     }
 }
 
-BoundingSphere Geometry::approxBoundingSphere() {
+/*BoundingSphere Geometry::approxBoundingSphere() {
     float squaredDiameter = 0.0f;
     vec3 position;
     for(int i=0; i<numVertices-1; i++) {
@@ -261,9 +261,11 @@ BoundingSphere Geometry::approxBoundingSphere() {
         }
     }
     return BoundingSphere(position, sqrt(squaredDiameter)/2.0f);
-}
+}*/
 
-BoundingEllipsoid Geometry::approxBoundingEllipsoid() {
+
+//TODO: clean up code
+BoundingEllipsoid Geometry::approxBoundingEllipsoid() const {
 
     float squaredDiameter = 0.0f;
     vec3 position;

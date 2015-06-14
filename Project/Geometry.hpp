@@ -56,8 +56,8 @@ class Geometry {
     void makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength);
     void makeSphere(int numSeg, int numRing);
 
-    BoundingSphere approxBoundingSphere();
-    BoundingEllipsoid approxBoundingEllipsoid();
+    //BoundingSphere approxBoundingSphere();
+    BoundingEllipsoid approxBoundingEllipsoid() const;
 
     void calculateNormals();
 };
