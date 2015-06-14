@@ -11,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <IL/il.h>
 #include "Mesh.hpp"
 #include "ShaderProgram.hpp"
@@ -24,7 +25,7 @@ using glm::mat4;
 const char* vertexShaderName = "minimal.vert";
 const char* fragmentShaderName = "minimal.frag";
 ShaderProgram shaderProgram = ShaderProgram();
-Mesh mesh = Mesh();
+Mesh mesh = Mesh(), sphere = Mesh();
 Texture texture = Texture();
 mat4 cameraMat = mat4();
 GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
@@ -35,10 +36,11 @@ static void resize(int width, int height)
     const float ar = (float) width / (float) height;
 
     cameraMat = glm::perspective(75.0f, ar, 0.1f, 100.f);
-    cameraMat = glm::translate(cameraMat, vec3(0.0f, -0.5f, -15.0f));
+    cameraMat = glm::translate(cameraMat, vec3(0.0f, -0.5f, -25.0f));
 
     glViewport(0, 0, width, height);
 }
+
 
 static void display(void)
 {
@@ -58,7 +60,20 @@ static void display(void)
     glBindTexture(GL_TEXTURE_2D, texture.getName());
     glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
 
+    glm::mat4 invertedOrientation = mesh.getOrientation();
+    //send the orientation matrix to the shader
+    glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(invertedOrientation));
+
     mesh.draw();
+    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    //glDisable(GL_DEPTH_TEST);
+
+    invertedOrientation = mesh.getOrientation() * sphere.getOrientation();
+    //send the orientation matrix to the shader
+    glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(invertedOrientation));
+    sphere.draw();
+    //glEnable(GL_DEPTH_TEST);
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
@@ -155,18 +170,29 @@ int main(int argc, char *argv[])
     //seed the random number generator
     srand(time(0));
 
-    Geometry geom1 = Geometry();
-    //geom1.loadOBJ("models/testUnit.obj", true);
-    geom1.makeRandomMeteor(15,15,12,0.08f);
+    Geometry geom1 = Geometry(), geom2 = Geometry();
+    geom1.loadOBJ("models/Satellite1.obj", false);
+    //geom1.makeRandomMeteor(15,15,12,0.08f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
+    geom2.makeSphere(30, 30);
+
+    sphere.makeMesh(geom2);
+
+    BoundingSphere bSphere = geom1.approxBoundingSphere();
+    cout << bSphere << endl;
+    sphere.transform(glm::scale(vec3(bSphere.radius)));
+    sphere.transform(glm::translate(bSphere.pos));
+
 
     //Make a mesh
-    mesh.makeMesh(geom1, orientationMatrixLocation);
+    mesh.makeMesh(geom1);
 
     //clear geometry memory, because it had been copied to the video card
     geom1.remove();
 
-    mesh.transform( glm::translate( vec3(1.0f,0.0f,0.0f) ) );
+    //mesh.transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
+
+    cout << glm::to_string(glm::translate( vec3(2.0f,0.0f,0.0f) ) );
 
     //Load a texture
     texture.load("textures/meteor.jpg");

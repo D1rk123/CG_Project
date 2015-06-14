@@ -178,7 +178,7 @@ void Geometry::makeSphere(int numSeg, int numRing)
 }
 
 glm::vec3 Geometry::calcTranformedPos(vec3 pos, vec3* directions, int numDirections, float noiseLength) {
-    float length = 0.5;
+    float length = 0.3;
     for(int k=0; k<numDirections; k++) {
         float dot = std::max(glm::dot(pos, directions[k]), 0.0f);
         length += dot*dot*dot*0.5;
@@ -245,4 +245,19 @@ void Geometry::calculateNormals() {
     }
 }
 
-BoundingSphere calcBoundingSphere();
+BoundingSphere Geometry::approxBoundingSphere() {
+    float squaredDiameter = 0.0f;
+    vec3 position;
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            float possibleDiameter = glm::dot(distance, distance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                position = vertices[j].pos + distance/2.0f;
+            }
+        }
+    }
+    return BoundingSphere(position, sqrt(squaredDiameter)/2.0f);
+}
+

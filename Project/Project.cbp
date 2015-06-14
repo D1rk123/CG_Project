@@ -51,6 +51,8 @@
 			<Add directory="../Libraries/glew-1.10.0/lib" />
 			<Add directory="../Libraries/DevIL-x86-1.7.8/lib" />
 		</Linker>
+		<Unit filename="BoundingSphere.cpp" />
+		<Unit filename="BoundingSphere.hpp" />
 		<Unit filename="Geometry.cpp" />
 		<Unit filename="Geometry.hpp" />
 		<Unit filename="Mesh.hpp" />

@@ -32,17 +32,17 @@ class Mesh {
         return indicesCount;
     }
     void transform(const glm::mat4& transformation) {
-        orientation = orientation * transformation;
+        orientation = transformation * orientation;
     }
     void setOrientation(const glm::mat4& newOrientation) {
         orientation = newOrientation;
     }
+    const glm::mat4& getOrientation() {
+        return orientation;
+    }
 
 
     void draw() {
-        glm::mat4 invertedOrientation = glm::inverse(orientation);
-        //send the orientation matrix to the shader
-        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(invertedOrientation));
         //Select the mesh vertices
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         //select the vertex positions
@@ -66,7 +66,7 @@ class Mesh {
         glDisableVertexAttribArray(2);
     }
 
-    void makeMesh(const Geometry& geom, GLuint orientationMatrixLocation) {
+    void makeMesh(const Geometry& geom) {
         indicesCount = geom.getNumIndices();
         //Generate a VBO and store vertex data in it
         glGenBuffers(1, &vbo);
@@ -76,8 +76,6 @@ class Mesh {
         glGenBuffers(1, &ibo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*geom.getNumIndices(), geom.getIndices(), GL_STATIC_DRAW);
-
-        this->orientationMatrixLocation = orientationMatrixLocation;
     }
 
     void remove() {

@@ -2,7 +2,6 @@
 #define HPP_VERTEX
 #include <iostream>
 #include <glm/glm.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 /**
  @brief Contains the data of one vertex.

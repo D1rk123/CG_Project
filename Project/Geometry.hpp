@@ -55,7 +55,7 @@ class Geometry {
     void makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength);
     void makeSphere(int numSeg, int numRing);
 
-    BoundingSphere calcBoundingSphere();
+    BoundingSphere approxBoundingSphere();
 
     void calculateNormals();
 };
