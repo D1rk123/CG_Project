@@ -8,8 +8,10 @@
 const double pi = 3.141592653589793238462643383279502884;
 const double epsilon = 0.0001;
 
+using glm::vec4;
 using glm::vec3;
 using glm::vec2;
+using glm::mat4;
 using std::vector;
 using std::cout;
 using std::endl;
@@ -261,3 +263,81 @@ BoundingSphere Geometry::approxBoundingSphere() {
     return BoundingSphere(position, sqrt(squaredDiameter)/2.0f);
 }
 
+BoundingEllipsoid Geometry::approxBoundingEllipsoid() {
+
+    float squaredDiameter = 0.0f;
+    vec3 position;
+    vec3 direction[3];
+    vec3 normalizedDirection[3];
+    float radius[3];
+
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            float possibleDiameter = glm::dot(distance, distance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                direction[0] = distance/2.0f;
+
+                position = vertices[j].pos + direction[0];
+            }
+        }
+    }
+    radius[0] = sqrtf(squaredDiameter)/2.0f;
+    normalizedDirection[0] = direction[0]/radius[0];
+    squaredDiameter = 0.0f;
+    float offset;
+
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            vec3 projectedDistance = distance - normalizedDirection[0] * glm::dot(distance, normalizedDirection[0]);
+            float possibleDiameter = glm::dot(projectedDistance, projectedDistance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                direction[1] = projectedDistance/2.0f;
+
+                radius[1] = sqrtf(squaredDiameter)/2.0f;
+                normalizedDirection[1] = direction[1]/radius[1];
+                offset = glm::dot(vertices[j].pos, normalizedDirection[1]) - glm::dot(position, normalizedDirection[1]) + radius[1];
+            }
+        }
+    }
+
+    position += normalizedDirection[1] * offset;
+
+    normalizedDirection[2] = glm::cross(normalizedDirection[0], normalizedDirection[1]);
+    squaredDiameter = 0.0f;
+
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            vec3 projectedDistance = normalizedDirection[2] * glm::dot(distance, normalizedDirection[2]);
+            float possibleDiameter = glm::dot(projectedDistance, projectedDistance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                direction[2] = projectedDistance/2.0f;
+
+                radius[2] = sqrtf(squaredDiameter)/2.0f;
+                normalizedDirection[2] = direction[2]/radius[2];
+                offset = glm::dot(vertices[j].pos, normalizedDirection[2]) - glm::dot(position, normalizedDirection[2]) + radius[2];
+            }
+        }
+    }
+
+    position += normalizedDirection[2] * offset;
+
+    /*cout << "Should be 0: " << glm::dot(direction[0], direction[1]) << endl;
+    cout << "Should be 0: " << glm::dot(direction[1], direction[2]) << endl;
+    cout << "Should be 0: " << glm::dot(direction[2], direction[0]) << endl;
+
+    cout << glm::to_string(direction[0]) << "length: " << glm::l2Norm(direction[0]) << endl;
+    cout << glm::to_string(direction[1]) << "length: " << glm::l2Norm(direction[1]) << endl;
+    cout << glm::to_string(direction[2]) << "length: " << glm::l2Norm(direction[2]) << endl;
+    cout << glm::to_string(position) << "length: " << glm::l2Norm(position) << endl;*/
+
+    mat4 result(vec4(direction[0], 0.0f), vec4(direction[1], 0.0f), vec4(direction[2], 0.0f), vec4(position, 1.0f));
+    //cout << glm::to_string(result) << endl;
+
+    return BoundingEllipsoid(result, radius[0]);
+}

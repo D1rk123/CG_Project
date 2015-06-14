@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 #include "Vertex.hpp"
 #include "BoundingSphere.hpp"
+#include "BoundingEllipsoid.hpp"
 
 class Geometry {
     Vertex* vertices;
@@ -56,6 +57,7 @@ class Geometry {
     void makeSphere(int numSeg, int numRing);
 
     BoundingSphere approxBoundingSphere();
+    BoundingEllipsoid approxBoundingEllipsoid();
 
     void calculateNormals();
 };

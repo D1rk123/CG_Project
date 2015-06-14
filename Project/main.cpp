@@ -16,6 +16,7 @@
 #include "Mesh.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
+#include "BoundingEllipsoid.hpp"
 
 using namespace std;
 using glm::vec4;
@@ -29,6 +30,7 @@ Mesh mesh = Mesh(), sphere = Mesh();
 Texture texture = Texture();
 mat4 cameraMat = mat4();
 GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
+BoundingEllipsoid bEllip;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -68,7 +70,7 @@ static void display(void)
     glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     //glDisable(GL_DEPTH_TEST);
 
-    invertedOrientation = mesh.getOrientation() * sphere.getOrientation();
+    invertedOrientation = mesh.getOrientation() * bEllip.orientation;
     //send the orientation matrix to the shader
     glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(invertedOrientation));
     sphere.draw();
@@ -171,14 +173,15 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1 = Geometry(), geom2 = Geometry();
-    geom1.loadOBJ("models/Satellite1.obj", false);
-    //geom1.makeRandomMeteor(15,15,12,0.08f);
+    //geom1.loadOBJ("models/Satellite1.obj", false);
+    geom1.makeRandomMeteor(15,15,12,0.08f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geom2.makeSphere(30, 30);
 
     sphere.makeMesh(geom2);
 
     BoundingSphere bSphere = geom1.approxBoundingSphere();
+    bEllip = geom1.approxBoundingEllipsoid();
     cout << bSphere << endl;
     sphere.transform(glm::scale(vec3(bSphere.radius)));
     sphere.transform(glm::translate(bSphere.pos));
@@ -192,7 +195,7 @@ int main(int argc, char *argv[])
 
     //mesh.transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
 
-    cout << glm::to_string(glm::translate( vec3(2.0f,0.0f,0.0f) ) );
+    //cout << glm::to_string(sphere.getOrientation() ) << endl;
 
     //Load a texture
     texture.load("textures/meteor.jpg");
