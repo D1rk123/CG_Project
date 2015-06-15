@@ -53,15 +53,16 @@
 		</Linker>
 		<Unit filename="BoundingEllipsoid.cpp" />
 		<Unit filename="BoundingEllipsoid.hpp" />
-		<Unit filename="BoundingSphere.cpp" />
-		<Unit filename="BoundingSphere.hpp" />
 		<Unit filename="Geometry.cpp" />
 		<Unit filename="Geometry.hpp" />
+		<Unit filename="Mesh.cpp" />
 		<Unit filename="Mesh.hpp" />
 		<Unit filename="ShaderProgram.hpp" />
 		<Unit filename="Texture.hpp" />
 		<Unit filename="Vertex.cpp" />
 		<Unit filename="Vertex.hpp" />
+		<Unit filename="glmToCout.cpp" />
+		<Unit filename="glmToCout.hpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="minimal.frag" />
 		<Unit filename="minimal.vert" />

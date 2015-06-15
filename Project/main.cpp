@@ -34,6 +34,7 @@ Texture texture = Texture(), texture2 = Texture();
 mat4 cameraMat = mat4();
 GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
 BoundingEllipsoid bEllip;
+bool drawEllips = true;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -41,7 +42,7 @@ static void resize(int width, int height)
     const float ar = (float) width / (float) height;
 
     cameraMat = glm::perspective(75.0f, ar, 0.1f, 100.f);
-    cameraMat = glm::translate(cameraMat, vec3(0.0f, 0.0f, -10.0f));
+    cameraMat = glm::translate(cameraMat, vec3(0.0f, 0.0f, -20.0f));
 
     glViewport(0, 0, width, height);
 }
@@ -55,8 +56,10 @@ static void display(void)
     //Select which shader program we use
     glUseProgram(shaderProgram.getName());
 
-    //rotate the model
-    meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
+    if(!meshes.back().testCollision(meshes.front())) {
+        //move the model
+        meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
+    }
 
     //send the camera matrix to the shader
     glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
@@ -65,21 +68,23 @@ static void display(void)
     glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
-        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-
         glBindTexture(GL_TEXTURE_2D, texture.getName());
         //send the orientation matrix to the shader
         glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
 
         iter->draw();
-        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+        if(drawEllips) {
+            glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-        glBindTexture(GL_TEXTURE_2D, texture2.getName());
+            glBindTexture(GL_TEXTURE_2D, texture2.getName());
 
-        mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
-        //send the orientation matrix to the shader
-        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
-        sphere.draw();
+            mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
+            //send the orientation matrix to the shader
+            glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
+            sphere.draw();
+
+            glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+        }
     }
 
     //swap the renderbuffer with the screenbuffer
@@ -97,6 +102,9 @@ static void key(unsigned char key, int x, int y)
     {
         case 'q':
             exit(0);
+            break;
+        case 'l':
+            drawEllips = !drawEllips;
             break;
     }
 
@@ -129,6 +137,7 @@ int main(int argc, char *argv[])
 
     const char* version = (const char*)glGetString(GL_VERSION);
     cout << "OpenGL Version:" << version << endl;
+    cout << "Turn drawing collision ellipsoids on/off with the l key." << endl;
 
     if (!glewIsSupported("GL_VERSION_3_3"))
     {
