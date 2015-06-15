@@ -16,7 +16,7 @@ void main(void)
 {
     mat3 normalRotationMatrix = mat3(orientation[0].xyz, orientation[1].xyz, orientation[2].xyz);
 
-    vert = vec3(gl_ModelViewMatrix * gl_Vertex); //Transform vertex to eye space
+    vert = vec3(orientation * vec4(pos,1.0f)); //Transform vertex to eye space
     normalEye = normalRotationMatrix*normalIn; //Transform normal vector to eye space
     texCoords = texCoordsIn;
 
