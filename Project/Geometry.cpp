@@ -8,8 +8,10 @@
 const double pi = 3.141592653589793238462643383279502884;
 const double epsilon = 0.0001;
 
+using glm::vec4;
 using glm::vec3;
 using glm::vec2;
+using glm::mat4;
 using std::vector;
 using std::cout;
 using std::endl;
@@ -94,31 +96,32 @@ bool Geometry::loadOBJ(const char * path, bool hasTexture)
     return true;
 }
 
-glm::vec3 Geometry::calcTranformedPos(vec3 pos, vec3* directions, int numDirections, float noiseLength) {
-    float length = 0.5;
-    for(int k=0; k<numDirections; k++) {
-        float dot = std::max(glm::dot(pos, directions[k]), 0.0f);
-        length += dot*dot*dot*0.5;
-    }
-    return pos*length+glm::ballRand(noiseLength);
+glm::vec3 Geometry::calcTriangleNormal(GLuint* indices) {
+    vec3 edge1 = vertices[indices[0]].pos   - vertices[indices[1]].pos;
+    vec3 edge2 = vertices[indices[2]].pos - vertices[indices[1]].pos;
+
+    return glm::normalize(glm::cross(edge2, edge1));
 }
 
-void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength)
+void Geometry::addTriangleAndConnections(GLuint triangle, GLuint vert1, GLuint vert2, GLuint vert3) {
+    indices[triangle*3] = vert1;
+    indices[triangle*3+1] = vert2;
+    indices[triangle*3+2] = vert3;
+    vertToTriConnections[vert1].push_back(triangle);
+    vertToTriConnections[vert2].push_back(triangle);
+    vertToTriConnections[vert3].push_back(triangle);
+}
+
+void Geometry::makeSphere(int numSeg, int numRing)
 {
     assert(numSeg >= 3);
     assert(numRing >= 2);
-
-    vec3 directions[numDirections];
-
-    //generate random vectors to extrude in that direction
-    for(int i=0; i<numDirections; i++) {
-        directions[i] = glm::ballRand(1.0f);
-    }
 
     numVertices = (numRing-1)*(numSeg+1)+2;
     numIndices = 3*(numRing-1)*numSeg*2;
     vertices = new Vertex[numVertices];
     indices = new unsigned int[numIndices];
+    vertToTriConnections = vector<vector<int> >(numVertices);
 
     //Calculate vertex positions
     for(int i=1; i<numRing; i++) {
@@ -130,42 +133,43 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
             double sinPhi = sin(phi);
             double cosPhi = cos(phi);
             vec3 position = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-            vertices[(i-1)*(numSeg+1)+j] = Vertex(calcTranformedPos(position, directions, numDirections, noiseLength), position, vec2(double(j)/(numSeg+1), double(i)/numRing));
+            vertices[(i-1)*(numSeg+1)+j] = Vertex(position, position, vec2(double(j)/numSeg, double(i)/numRing));
         }
-        vertices[(i-1)*(numSeg+1)+numSeg].pos = vertices[(i-1)*(numSeg+1)].pos;
     }
 
     //Calculate upper and lower ring faces
     int topCorner = (numRing-1)*(numSeg+1);
     int bottomCorner = topCorner+1;
 
-    vertices[topCorner] =    Vertex(calcTranformedPos(vec3(0,0,1), directions, numDirections, noiseLength),
-                                    vec3(0,0,1), vec2(0.5f,1.0f));
-    vertices[bottomCorner] = Vertex(calcTranformedPos(vec3(0,0,-1), directions, numDirections, noiseLength),
-                                    vec3(0,0,-1), vec2(0.5f,0.0f));
+    vertices[topCorner] =    Vertex(vec3(0,0,1), vec3(0,0,1), vec2(0.5f,0.0f));
+    vertices[bottomCorner] = Vertex(vec3(0,0,-1), vec3(0,0,-1), vec2(0.5f,1.0f));
+
     for(int i=0; i<numSeg; i++) {
-        indices[i*3] = topCorner;
-        indices[i*3+1] = i;
-        indices[i*3+2] = i+1;
-        indices[3*numSeg+i*3] = bottomCorner;
-        indices[3*numSeg+i*3+1] = (numRing-2)*(numSeg+1)+i+1;
-        indices[3*numSeg+i*3+2] = (numRing-2)*(numSeg+1)+i;
+        //Make top ring triangles
+        addTriangleAndConnections(i, topCorner, i, i+1);
+        //Make bottom ring triangles
+        addTriangleAndConnections(numSeg+i, bottomCorner, (numRing-2)*(numSeg+1)+i+1, (numRing-2)*(numSeg+1)+i);
     }
+    //store the connections of the right most vertices to the left most triangles and vice versa
+    vertToTriConnections[0].push_back(numSeg-1);
+    vertToTriConnections[numSeg-1].push_back(0);
+    vertToTriConnections[numSeg].push_back(2*numSeg-1);
+    vertToTriConnections[2*numSeg-1].push_back(numSeg);
 
     //calculate faces of other rings
     for(int i=0; i<numRing-2; i++) {
-        int indexOffset = (i+1)*(6*((numSeg+1)-1));
+        int indexOffset = (i+1)*(2*((numSeg+1)-1));
         for(int j=0; j<numSeg; j++) {
-            indices[indexOffset+j*6+0] = i*(numSeg+1)+j;
-            indices[indexOffset+j*6+1] = (i+1)*(numSeg+1)+j+1;
-            indices[indexOffset+j*6+2] = i*(numSeg+1)+j+1;
-            indices[indexOffset+j*6+3] = i*(numSeg+1)+j;
-            indices[indexOffset+j*6+4] = (i+1)*(numSeg+1)+j;
-            indices[indexOffset+j*6+5] = (i+1)*(numSeg+1)+j+1;
+            addTriangleAndConnections(indexOffset+2*j, i*(numSeg+1)+j, (i+1)*(numSeg+1)+j+1, i*(numSeg+1)+j+1);
+            addTriangleAndConnections(indexOffset+2*j+1, i*(numSeg+1)+j, (i+1)*(numSeg+1)+j, (i+1)*(numSeg+1)+j+1);
         }
-    }
+        //store the connections of the right most vertices to the left most triangles and vice versa
+        vertToTriConnections[i*(numSeg+1)].push_back(indexOffset+(numSeg-1)*2);
+        vertToTriConnections[(i+1)*(numSeg+1)].push_back(indexOffset+(numSeg-1)*2);
+        vertToTriConnections[i*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset);
+        vertToTriConnections[(i+1)*(numSeg+1)+(numSeg-1)+1].push_back(indexOffset);
 
-    calculateNormals();
+    }
 
     /*for(int i=0; i<numVertices; i++) {
         std::cout << i << ": " << vertices[i] << std::endl;
@@ -175,30 +179,167 @@ void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, floa
     }*/
 }
 
+glm::vec3 Geometry::calcTranformedPos(vec3 pos, vec3* directions, int numDirections, float noiseLength) {
+    float length = 0.3;
+    for(int k=0; k<numDirections; k++) {
+        float dot = std::max(glm::dot(pos, directions[k]), 0.0f);
+        length += dot*dot*dot*0.5;
+    }
+    return pos*length+glm::ballRand(noiseLength);
+}
+
+void Geometry::makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength) {
+    //Start off with a sphere
+    makeSphere(numSeg, numRing);
+
+    //generate random vectors to extrude in those directions
+    vec3 directions[numDirections];
+    for(int i=0; i<numDirections; i++) {
+        directions[i] = glm::ballRand(1.0f);
+    }
+
+    //transform all vertices of the sphere
+    for(int i=0; i<numVertices; i++) {
+        vertices[i].pos = calcTranformedPos(vertices[i].pos, directions, numDirections, noiseLength);
+    }
+
+    //Attach the vertices of the seam by giving them the same position
+    for(int i=1; i<numRing; i++) {
+        vertices[(i-1)*(numSeg+1)+numSeg].pos = vertices[(i-1)*(numSeg+1)].pos;
+    }
+
+    calculateNormals();
+}
+
+void Geometry::calculateConnections() {
+    int numTriangles = numIndices/3;
+    vertToTriConnections = vector<vector<int> >(numVertices);
+    for(int i=0; i<numTriangles; i++) {
+        vertToTriConnections[indices[i*3]].push_back(i);
+        vertToTriConnections[indices[i*3+1]].push_back(i);
+        vertToTriConnections[indices[i*3+2]].push_back(i);
+    }
+}
+
 void Geometry::calculateNormals() {
     int numTriangles = numIndices/3;
     vector<vec3> triangleNormals = vector<vec3>(numTriangles);
-    vector<vector<int> > connected = vector<vector<int> >(numVertices);
+
+    //If not yet calculated, calculate which vertices connect to which triangles
+    if(vertToTriConnections.size() == 0) {
+        calculateConnections();
+    }
 
     //calculate the normal for each triangle
     //and add a reference to the normal to each vertex of the same triangle
     for(int i=0; i<numTriangles; i++) {
-        vec3 edge1 = vertices[indices[i*3]].pos   - vertices[indices[i*3+1]].pos;
-        vec3 edge2 = vertices[indices[i*3+2]].pos - vertices[indices[i*3+1]].pos;
-
-        triangleNormals[i] = glm::normalize(glm::cross(edge2, edge1));
-        connected[indices[i*3]].push_back(i);
-        connected[indices[i*3+1]].push_back(i);
-        connected[indices[i*3+2]].push_back(i);
+        triangleNormals[i] = calcTriangleNormal(&indices[i*3]);
     }
 
     //calculate the normal for each vertex by combining the normals of the connected faces
     for(int i=0; i<numVertices; i++) {
         vec3 normal = vec3(0);
-        for(size_t j=0; j<connected[i].size(); j++) {
-            normal += triangleNormals[connected[i][j]];
+        for(size_t j=0; j<vertToTriConnections[i].size(); j++) {
+            normal += triangleNormals[vertToTriConnections[i][j]];
         }
         vertices[i].normal = glm::normalize(normal);
         //cout << glm::to_string(vertices[i].normal) << endl;
     }
+}
+
+/*BoundingSphere Geometry::approxBoundingSphere() {
+    float squaredDiameter = 0.0f;
+    vec3 position;
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            float possibleDiameter = glm::dot(distance, distance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                position = vertices[j].pos + distance/2.0f;
+            }
+        }
+    }
+    return BoundingSphere(position, sqrt(squaredDiameter)/2.0f);
+}*/
+
+
+//TODO: clean up code
+BoundingEllipsoid Geometry::approxBoundingEllipsoid() const {
+
+    float squaredDiameter = 0.0f;
+    vec3 position;
+    vec3 direction[3];
+    vec3 normalizedDirection[3];
+    float radius[3];
+
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            float possibleDiameter = glm::dot(distance, distance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                direction[0] = distance/2.0f;
+
+                position = vertices[j].pos + direction[0];
+            }
+        }
+    }
+    radius[0] = sqrtf(squaredDiameter)/2.0f;
+    normalizedDirection[0] = direction[0]/radius[0];
+    squaredDiameter = 0.0f;
+    float offset;
+
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            vec3 projectedDistance = distance - normalizedDirection[0] * glm::dot(distance, normalizedDirection[0]);
+            float possibleDiameter = glm::dot(projectedDistance, projectedDistance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                direction[1] = projectedDistance/2.0f;
+
+                radius[1] = sqrtf(squaredDiameter)/2.0f;
+                normalizedDirection[1] = direction[1]/radius[1];
+                offset = glm::dot(vertices[j].pos, normalizedDirection[1]) - glm::dot(position, normalizedDirection[1]) + radius[1];
+            }
+        }
+    }
+
+    position += normalizedDirection[1] * offset;
+
+    normalizedDirection[2] = glm::cross(normalizedDirection[0], normalizedDirection[1]);
+    squaredDiameter = 0.0f;
+
+    for(int i=0; i<numVertices-1; i++) {
+        for(int j=i+1; j<numVertices; j++) {
+            vec3 distance = vertices[i].pos - vertices[j].pos;
+            vec3 projectedDistance = normalizedDirection[2] * glm::dot(distance, normalizedDirection[2]);
+            float possibleDiameter = glm::dot(projectedDistance, projectedDistance);
+            if(possibleDiameter > squaredDiameter) {
+                squaredDiameter = possibleDiameter;
+                direction[2] = projectedDistance/2.0f;
+
+                radius[2] = sqrtf(squaredDiameter)/2.0f;
+                normalizedDirection[2] = direction[2]/radius[2];
+                offset = glm::dot(vertices[j].pos, normalizedDirection[2]) - glm::dot(position, normalizedDirection[2]) + radius[2];
+            }
+        }
+    }
+
+    position += normalizedDirection[2] * offset;
+
+    /*cout << "Should be 0: " << glm::dot(direction[0], direction[1]) << endl;
+    cout << "Should be 0: " << glm::dot(direction[1], direction[2]) << endl;
+    cout << "Should be 0: " << glm::dot(direction[2], direction[0]) << endl;
+
+    cout << glm::to_string(direction[0]) << "length: " << glm::l2Norm(direction[0]) << endl;
+    cout << glm::to_string(direction[1]) << "length: " << glm::l2Norm(direction[1]) << endl;
+    cout << glm::to_string(direction[2]) << "length: " << glm::l2Norm(direction[2]) << endl;
+    cout << glm::to_string(position) << "length: " << glm::l2Norm(position) << endl;*/
+
+    mat4 result(vec4(direction[0], 0.0f), vec4(direction[1], 0.0f), vec4(direction[2], 0.0f), vec4(position, 1.0f));
+    //cout << glm::to_string(result) << endl;
+
+    return BoundingEllipsoid(result, radius[0]);
 }

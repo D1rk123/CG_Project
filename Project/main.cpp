@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <ctime>
+#include <list>
 #include <GL/glew.h>
 #ifdef __APPLE__
 #include <GLUT/glut.h>
@@ -10,24 +11,29 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <IL/il.h>
 #include "Mesh.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
 #include "Camera.h"
+#include "BoundingEllipsoid.hpp"
 
 using namespace std;
 using glm::vec4;
 using glm::vec3;
 using glm::mat4;
+using std::list;
 
 const char* vertexShaderName = "minimal.vert";
 const char* fragmentShaderName = "minimal.frag";
 ShaderProgram shaderProgram = ShaderProgram();
-Mesh mesh = Mesh();
-Texture texture = Texture();
+list<Mesh> meshes;
+Mesh sphere = Mesh();
+Texture texture = Texture(), texture2 = Texture();
 mat4 cameraMat = mat4();
-GLuint matrixLocation, samplerLocation;
+
 int lastTime = glutGet(GLUT_ELAPSED_TIME);
 int timediff = 0;
 Camera gCamera;
@@ -36,18 +42,22 @@ float deltaAngleY = 0.0f;
 int xOrigin = -1;
 int yOrigin = -1;
 
+GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
+BoundingEllipsoid bEllip;
+bool drawEllips = true;
+
+
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    //cameraMat = glm::perspective(75.0f, ar, 0.1f, 100.f);
-    //cameraMat = glm::translate(cameraMat, vec3(0.0f, -0.5f, -5.0f));
     gCamera.setPosition(glm::vec3(0,0,4));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
 }
+
 
 void updateCamera(string direction)
 {
@@ -71,6 +81,7 @@ void updateCamera(string direction)
     }
 }
 
+
 static void display(void)
 {
     //Clear the render buffer
@@ -79,20 +90,44 @@ static void display(void)
     //Select which shader program we use
     glUseProgram(shaderProgram.getName());
 
+
     //rotate the model
     lastTime = glutGet(GLUT_ELAPSED_TIME);
     //cameraMat = glm::rotate(cameraMat, timediff*0.01f, vec3(0,1,0));
 
     // send the camera matrix to the shader
     //glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
-    glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
+    glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
+
+    if(!meshes.back().testCollision(meshes.front())) {
+        //move the model
+        meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
+        meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
+    }
 
     //send the texture selection to the shader
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture.getName());
     glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
 
-    mesh.draw();
+    for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
+        glBindTexture(GL_TEXTURE_2D, texture.getName());
+        //send the orientation matrix to the shader
+        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
+
+        iter->draw();
+        if(drawEllips) {
+            glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+            glBindTexture(GL_TEXTURE_2D, texture2.getName());
+
+            mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
+            //send the orientation matrix to the shader
+            glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
+            sphere.draw();
+
+            glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+        }
+    }
 
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
@@ -159,6 +194,9 @@ static void key(unsigned char key, int x, int y)
         case 'z':
             updateCamera("up");
             break;
+        case 'l':
+            drawEllips = !drawEllips;
+            break;
     }
 
     glutPostRedisplay();
@@ -190,6 +228,7 @@ int main(int argc, char *argv[])
 
     const char* version = (const char*)glGetString(GL_VERSION);
     cout << "OpenGL Version:" << version << endl;
+    cout << "Turn drawing collision ellipsoids on/off with the l key." << endl;
 
     if (!glewIsSupported("GL_VERSION_3_3"))
     {
@@ -227,27 +266,46 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    //seed the random number generator
-    srand(time(0));
-
-    Geometry geom1 = Geometry();
-    //geom1.loadOBJ("models/testUnit.obj", true);
-    geom1.makeRandomMeteor(15,15,12,0.08f);
-    //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
-
-    //Make a mesh
-    mesh.makeMesh(geom1);
-
-    geom1.remove();
-    //Load a texture
-    texture.load("textures/meteor.jpg");
     //Set up shaders
     shaderProgram.setupShaders(vertexShaderName, fragmentShaderName);
     //Set uniform variable locations
-    matrixLocation = glGetUniformLocation(shaderProgram.getName(), "camera");
-    assert(matrixLocation != 0xFFFFFFFF);
+    cameraMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "camera");
+    assert(cameraMatrixLocation != 0xFFFFFFFF);
     samplerLocation = glGetUniformLocation(shaderProgram.getName(), "textureSampler");
     assert(samplerLocation != 0xFFFFFFFF);
+    orientationMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "orientation");
+    assert(orientationMatrixLocation != 0xFFFFFFFF);
+
+    //seed the random number generator
+    srand(time(0));
+
+    Geometry geom1, geom2, geomSphere;
+    //geom1.loadOBJ("models/Satellite1.obj", false);
+    geom1.makeRandomMeteor(15,15,12,0.04f);
+    geom2.makeRandomMeteor(15,15,12,0.04f);
+    //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
+    geomSphere.makeSphere(20, 20);
+
+    //Make a mesh
+    sphere.makeMesh(geomSphere);
+
+    meshes.push_back(Mesh(geom1));
+    meshes.push_back(Mesh(geom2));
+
+    //clear geometry memory, because it had been copied to the video card
+    geom1.remove();
+    geom2.remove();
+    geomSphere.remove();
+
+    meshes.front().transform( glm::translate( vec3(-10.0f,0.0f,0.0f) ) );
+    //meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
+
+    //cout << glm::to_string(sphere.getOrientation() ) << endl;
+
+    //Load a texture
+    texture.load("textures/meteor.jpg");
+    //Load a texture
+    texture2.load("textures/white.png");
 
     //Start the GLUT loop
     glutMainLoop();
