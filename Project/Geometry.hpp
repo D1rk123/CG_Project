@@ -3,11 +3,13 @@
 #include <GL/gl.h>
 #include <glm/vec3.hpp>
 #include "Vertex.hpp"
+#include "BoundingEllipsoid.hpp"
 
 class Geometry {
     Vertex* vertices;
     unsigned int* indices;
     GLsizei numVertices, numIndices;
+    std::vector<std::vector<int> > vertToTriConnections;
 
     public:
     Geometry() {
@@ -45,13 +47,18 @@ class Geometry {
 
     protected:
     glm::vec3 calcTranformedPos(glm::vec3 pos, glm::vec3* directions, int numDirections, float noiseLength);
-
+    void addTriangleAndConnections(GLuint triangle, GLuint vert1, GLuint vert2, GLuint vert3);
+    void calculateConnections();
     glm::vec3 calcTriangleNormal(GLuint* indices);
 
     public:
     void makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength);
+    void makeSphere(int numSeg, int numRing);
 
-    //void calculateNormals();
+    //BoundingSphere approxBoundingSphere();
+    BoundingEllipsoid approxBoundingEllipsoid() const;
+
+    void calculateNormals();
 };
 
 #endif // HPP_GEOMETRY
