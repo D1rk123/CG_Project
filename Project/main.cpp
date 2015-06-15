@@ -59,6 +59,7 @@ static void display(void)
     if(!meshes.back().testCollision(meshes.front())) {
         //move the model
         meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
+        meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
     }
 
     //send the camera matrix to the shader
@@ -188,8 +189,8 @@ int main(int argc, char *argv[])
 
     Geometry geom1, geom2, geomSphere;
     //geom1.loadOBJ("models/Satellite1.obj", false);
-    geom1.makeRandomMeteor(15,15,12,0.08f);
-    geom2.makeRandomMeteor(15,15,12,0.08f);
+    geom1.makeRandomMeteor(15,15,12,0.04f);
+    geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
 
@@ -204,8 +205,8 @@ int main(int argc, char *argv[])
     geom2.remove();
     geomSphere.remove();
 
-    meshes.front().transform( glm::translate( vec3(-2.0f,0.0f,0.0f) ) );
-    meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
+    meshes.front().transform( glm::translate( vec3(-10.0f,0.0f,0.0f) ) );
+    //meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
 
     //cout << glm::to_string(sphere.getOrientation() ) << endl;
 
