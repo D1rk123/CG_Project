@@ -3,6 +3,7 @@
 in vec3 normal;
 in vec2 texCoords;
 
+
 uniform sampler2D textureSampler;
 
 void main(void)
