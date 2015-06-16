@@ -86,7 +86,7 @@ class Texture
         assert(loaded == true);
         return name;
     }
-
+\
     inline void remove()
     {
         if (loaded)
