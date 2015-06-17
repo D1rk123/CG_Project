@@ -8,16 +8,12 @@
 
 class Lazor: public GameObject
 {
-    static Texture lazorTextures[3];
     double frame;
     glm::vec3 direction;
     bool isDescending;
     float speed;
 
     public:
-    static void loadLazorTextures() {
-
-    }
 
     size_t getTextureIndex() {
         return (size_t)frame;

@@ -65,7 +65,7 @@ GLuint skyboxOffsetLocation, skyboxSamplerLocation;
 GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocation;
 
 BoundingEllipsoid bEllip;
-bool drawEllips = true;
+bool drawEllips = false;
 
 list<Lazor> lazors;
 list<GameObject> meteors;
@@ -154,6 +154,7 @@ void collectGameObjects () {
         gameObjects.push_back(&(*iter));
     }
 }
+
 void displayEllipsoids () {
     if(drawEllips) {
         collectGameObjects();
@@ -171,10 +172,10 @@ void displayEllipsoids () {
 }
 
 void testCollisions() {
-    /*collectGameObjects();
+    collectGameObjects();
     for(int i=0; i<((int)gameObjects.size())-1; i++) {
         for(size_t j=i+1; j<gameObjects.size(); j++) {
-            gameObjects[i]->testCollision(gameObjects[j]);
+            gameObjects[i]->testCollision(gameObjects[j])
         }
     }
     if(bird.getCollided()) {
@@ -182,14 +183,14 @@ void testCollisions() {
     }
     for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
         if(iter->getCollided()) {
-            meteors.erase(iter);
+            iter = meteors.erase(iter);
         }
     }
     for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
         if(iter->getCollided()) {
-            lazors.erase(iter);
+            iter = lazors.erase(iter);
         }
-    }*/
+    }
 }
 
 void updateLazors() {
