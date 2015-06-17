@@ -175,7 +175,7 @@ void testCollisions() {
     collectGameObjects();
     for(int i=0; i<((int)gameObjects.size())-1; i++) {
         for(size_t j=i+1; j<gameObjects.size(); j++) {
-            gameObjects[i]->testCollision(gameObjects[j])
+            gameObjects[i]->testCollision(gameObjects[j]);
         }
     }
     if(bird.getCollided()) {
@@ -510,7 +510,7 @@ void setupModels() {
     //geom1.makeRandomMeteor(15,15,12,0.05f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
-    geomFlappy.loadOBJ("models/flappyDerpitor.obj", true);
+    geomFlappy.loadOBJ("models/FlappyDerpinator.obj", true);
     geomLazor.loadOBJ("models/lazor.obj", true);
 
     sphereMesh.makeMesh(geomSphere);
