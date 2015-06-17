@@ -9,6 +9,7 @@ out vec4 colorOut;
 
 uniform sampler2D textureSampler;
 uniform mat4 camera;
+uniform vec3 lazorPos[10];
 
 void main(void)
 {
@@ -31,6 +32,6 @@ void main(void)
     // calculate specular term
     vec4 Ispec = specular * pow(max(dot(reflection,eyeDir),0.0),shininess * shininessFactor);
 
-    colorOut = Ispec + (ambient + Idiff) * vec4(texture(textureSampler, texCoords));
+    colorOut = Ispec + (ambient + Idiff) * vec4(texture(textureSampler, texCoords)) + vec4(lazorPos[0]);
     //colorOut = vec4(0.25*(normal+vec3(1)),1) + 0.5 * vec4(texture(textureSampler, texCoords).rgb, 1.0);
 }

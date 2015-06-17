@@ -56,7 +56,7 @@ int xOrigin = -1;
 int yOrigin = -1;
 bool jumped = false;
 
-GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation;
+GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation, phongLazorPositionsLocation;
 GLuint skyboxOffsetLocation, skyboxSamplerLocation;
 GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocation;
 
@@ -167,11 +167,20 @@ void displayEllipsoids () {
     }
 }
 
+void cleanupLazors() {
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
+        if(iter->checkOutsideOfView(gCamera.matrix())) {
+            iter = lazors.erase(iter);
+            cout << "Erasing lazor" << endl;
+        }
+    }
+}
+
 void testCollisions() {
     collectGameObjects();
     for(int i=0; i<((int)gameObjects.size())-1; i++) {
         for(size_t j=i+1; j<gameObjects.size(); j++) {
-            gameObjects[i]->testCollision(gameObjects[j])
+            gameObjects[i]->testCollision(gameObjects[j]);
         }
     }
     if(bird.getCollided()) {
@@ -211,6 +220,7 @@ static void display(void)
 
     bird.update(getTimeFactorBetweenUpdates());
     updateLazors();
+    cleanupLazors();
 
     testCollisions();
 
@@ -232,6 +242,12 @@ static void display(void)
 
     //send the texture selection to the shader
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
+
+    float lazorPositions[30];
+    lazorPositions[0] = 0.5;
+    lazorPositions[1] = 0.0;
+    lazorPositions[2] = 0.0;
+    glUniform3fv(phongLazorPositionsLocation, 10, lazorPositions);
 
     displayFlappy();
     displayMeteors();
@@ -426,6 +442,8 @@ void setupShaders() {
     assert(phongSamplerLocation != 0xFFFFFFFF);
     phongOrientationMatrixLocation = glGetUniformLocation(phongShading.getName(), "orientation");
     assert(phongOrientationMatrixLocation != 0xFFFFFFFF);
+    phongLazorPositionsLocation = glGetUniformLocation(phongShading.getName(), "lazorPos");
+    assert(phongLazorPositionsLocation != 0xFFFFFFFF);
 
     skyboxShading.setupShaders(skyboxVertexShaderName, skyboxFragmentShaderName);
     skyboxOffsetLocation = glGetUniformLocation(skyboxShading.getName(), "offset");
