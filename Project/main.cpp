@@ -15,6 +15,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <IL/il.h>
 #include "Mesh.hpp"
+#include "Lazor.hpp"
 #include "FlappyBird.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
@@ -32,7 +33,7 @@ const char* vertexShaderName = "minimal.vert";
 const char* fragmentShaderName = "minimal.frag";
 ShaderProgram shaderProgram = ShaderProgram();
 list<Mesh> meshes;
-Mesh sphere = Mesh();
+Mesh sphere, lazorMesh;
 FlappyBird bird = FlappyBird();
 
 Texture texture = Texture(), texture2 = Texture();
@@ -59,10 +60,9 @@ double frame;
 Texture lazorTexture0 = Texture();
 Texture lazorTexture1 = Texture();
 Texture lazorTexture2 = Texture();
-bool isDescending;
 bool isShot;
 int maxNumLasers = 5;
-vector<Mesh> lasers(maxNumLasers);
+vector<Lazor> lasers;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -70,7 +70,7 @@ static void resize(int width, int height)
     const float ar = (float) width / (float) height;
 
 
-    gCamera.setPosition(glm::vec3(0.0f,0.0f,80.0f));
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,50.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -100,14 +100,10 @@ void updateCamera(string direction)
 float getTimeFactorBetweenUpdates() {
     //cout << diffTime << endl;
     float timeseconds = (float)diffTime/1000;
-    float factor = 0.1f;
+    float factor = 1.0f;
     return timeseconds*factor;
 }
 
-/*void jump(){
-    //bird.changeEnergy(-2*energyRate);
-    bird.increaseJumpVelocity();
-}*/
 
 void updateBirdMovement() {
     bird.changeEnergy(energyRate);
@@ -122,35 +118,6 @@ void updateBirdMovement() {
     gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
 }
 
-static void updateLasers()
-{
-    // Laser animation
-    if(!isDescending) {
-        if(frame <= 3) {
-            frame += 0.01;
-        }else{
-            isDescending = true;
-        }
-    }
-
-    if (isDescending)
-    {
-        if(frame >= 0){
-            frame -= 0.01;
-        }else{
-            isDescending = false;
-        }
-    }
-
-    if (isShot)
-    {
-        for(int i=0; i<maxNumLasers; ++i){
-            glm::vec3 update = lasers[i].getMovement()*getTimeFactorBetweenUpdates();
-            lasers[i].transform(glm::translate(update));
-            cout << "update: " << glm::to_string(update) << endl;
-        }
-    }
-}
 
 static void display(void)
 {
@@ -168,7 +135,6 @@ static void display(void)
 
     // Update gravity for bird
     updateBirdMovement();
-    updateLasers();
 
     // Find rotation matrix to make flappybird face in direction of movement
     glm::vec3 dir = glm::normalize(bird.getMesh()->getMovement());
@@ -187,19 +153,23 @@ static void display(void)
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
 
+    for(int i=0; i<lasers.size(); i++) {
+        lasers[i].update(getTimeFactorBetweenUpdates());
+        glBindTexture( GL_TEXTURE_2D, textures[(int)lasers[i].frame].getName() );
+        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lasers[i].orientation));
+        lazorMesh.draw();
+    }
+
+
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
-//        glBindTexture(GL_TEXTURE_2D, texture.getName());
 
         // Load texture at frame
-        glBindTexture( GL_TEXTURE_2D, textures[(int)frame].getName() );
-//        glBindTexture( GL_TEXTURE_2D, texture.getName() );
-
         //send the orientation matrix to the shader
-
         glm::mat4 sendOrientation = iter->getOrientation()*flightRotation;
         glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(sendOrientation));
 
         iter->draw();
+
         if(drawEllips) {
             glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
@@ -261,25 +231,10 @@ static void keyUp(unsigned char key, int x, int y) {
 
 static void shootLazor()
 {
-    Geometry lazor;
-    lazor.loadOBJ("models/lazor.obj", true);
-    Mesh laser = Mesh(lazor);
-//    meshes.back().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
-
     mat4 orientation = bird.getMesh()->getOrientation();
     vec3 direction = bird.getMesh()->getMovement();
 
-    cout << "orientation: " << glm::to_string(orientation) << endl;
-    cout << "direction: " << glm::to_string(direction) << endl;
-
-    laser.setOrientation(orientation);
-    laser.setMovement(direction);
-
-    meshes.push_back(laser);
-    lasers.push_back(laser);
-
-    isShot = true;
-    lazor.remove();
+    lasers.push_back(Lazor(orientation, direction));
 }
 
 static void key(unsigned char key, int x, int y)
@@ -421,6 +376,12 @@ int main(int argc, char *argv[])
 
     //Make a mesh
     sphere.makeMesh(geomSphere);
+
+    //Make laser mesh
+    Geometry lazor;
+    lazor.loadOBJ("models/lazor.obj", true);
+    lazorMesh.makeMesh(lazor);
+    lasers.reserve(maxNumLasers);
 
     meshes.push_back(Mesh(geom1));
     meshes.push_back(Mesh(geom2));
