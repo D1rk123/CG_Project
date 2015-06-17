@@ -438,8 +438,8 @@ void setupModels() {
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
 
-    //geomFlappy.loadOBJ("models/FlappyDerpinator.obj", true);
-    geomFlappy.loadOBJ("models/Satellite1.obj", false);
+    geomFlappy.loadOBJ("models/FlappyDerpinator.obj", true);
+    //geomFlappy.loadOBJ("models/Satellite1.obj", false);
     geomLazor.loadOBJ("models/lazor.obj", true);
 
     sphereMesh.makeMesh(geomSphere);
