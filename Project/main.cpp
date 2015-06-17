@@ -64,6 +64,8 @@ bool isShot;
 int maxNumLazors = 5;
 vector<Lazor> lazors;
 
+float countDown = 0.0f;
+
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
@@ -138,6 +140,23 @@ void displayLazors () {
     }
 }
 
+void addMeteor() {
+    Geometry geom;
+    int numSeg = rand() % 15 + 5;
+    int numRing = rand() % 15 + 5;
+    int numDirections = rand() % 15 + 5;
+    float noiseLength = 0.05f;
+
+    cout << "seg: " << numSeg << endl;
+    cout << "ring: " << numRing << endl;
+    cout << "numDirections: " << numDirections << endl;
+    cout << "noiseLength: " << noiseLength << endl;
+    cout << "meshes size: " << meshes.size() << endl;
+
+    geom.makeRandomMeteor(numSeg, numRing, numDirections, noiseLength);
+    meshes.push_back(Mesh(geom));
+    geom.remove();
+}
 
 static void display(void)
 {
@@ -167,6 +186,16 @@ static void display(void)
 
     displayFlappy();
     displayLazors();
+
+    // Every x seconds add a meteor to meshes
+    float updateTime = getTimeFactorBetweenUpdates();
+    countDown += updateTime;
+//    cout << "times: " << countDown << endl;
+    if (countDown > 8.0f) {
+       addMeteor();
+       countDown = 0.0f;
+    }
+
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
 
@@ -292,6 +321,9 @@ static void key(unsigned char key, int x, int y)
         case 'p':
             shootLazor();
             break;
+        case 'h':
+            addMeteor();
+            break;
     }
 
     glutPostRedisplay();
@@ -394,11 +426,11 @@ void setupTextures() {
 }
 
 void setupModels() {
-    Geometry geom1, geom2, geomSphere, geomSkybox, geomFlappy, geomLazor;
+    Geometry geomSphere, geomSkybox, geomFlappy, geomLazor;
 
     //Make geometry
-    geom1.makeRandomMeteor(15,15,12,0.05f);
-    geom2.makeRandomMeteor(15,15,12,0.04f);
+//    geom1.makeRandomMeteor(15,15,12,0.05f);
+//    geom2.makeRandomMeteor(15,15,12,0.04f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
     geomFlappy.loadOBJ("models/testUnit.obj", true);
@@ -411,15 +443,15 @@ void setupModels() {
 
     lazors.reserve(maxNumLazors);
 
-    meshes.push_back(Mesh(geom1));
-    meshes.push_back(Mesh(geom2));
+//    meshes.push_back(Mesh(geom1));
+//    meshes.push_back(Mesh(geom2));
 
     bird = FlappyBird(&flappyMesh);
     bird.startFlying();
 
     //clear geometry memory, because it had been copied to the video card
-    geom1.remove();
-    geom2.remove();
+//    geom1.remove();
+//    geom2.remove();
     geomSphere.remove();
     geomSkybox.remove();
     geomFlappy.remove();
