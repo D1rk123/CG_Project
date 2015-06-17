@@ -30,11 +30,13 @@ using glm::mat4;
 using std::list;
 
 const char* skyboxVertexShaderName = "skybox.vert";
-const char* skyboxFragmentShaderName = "skybox.frag";
-const char* phongVertexShaderName = "minimal.vert";
-const char* phongFragmentShaderName = "minimal.frag";
+const char* skyboxFragmentShaderName = "flat.frag";
+const char* phongVertexShaderName = "phong.vert";
+const char* phongFragmentShaderName = "phong.frag";
+const char* flatVertexShaderName = "flat.vert";
+const char* flatFragmentShaderName = "flat.frag";
 
-ShaderProgram phongShading, skyboxShading;
+ShaderProgram phongShading, skyboxShading, flatShading;
 list<Mesh> meshes;
 Mesh sphereMesh, lazorMesh, skyboxMesh, flappyMesh;
 FlappyBird bird = FlappyBird();
@@ -54,6 +56,7 @@ bool jumped = false;
 
 GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation;
 GLuint skyboxOffsetLocation, skyboxSamplerLocation;
+GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocation;
 
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
@@ -130,10 +133,12 @@ void displayFlappy() {
 }
 
 void displayLazors () {
+    glUseProgram(flatShading.getName());
+    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
     for(size_t i=0; i<lazors.size(); i++) {
         lazors[i].update(getTimeFactorBetweenUpdates());
         glBindTexture( GL_TEXTURE_2D, lazorTextures[(int)lazors[i].frame].getName() );
-        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lazors[i].orientation));
+        glUniformMatrix4fv(flatOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lazors[i].orientation));
         lazorMesh.draw();
     }
 }
@@ -166,7 +171,6 @@ static void display(void)
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
     displayFlappy();
-    displayLazors();
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
 
@@ -191,6 +195,8 @@ static void display(void)
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
         }
     }
+
+    displayLazors();
 
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
@@ -380,6 +386,14 @@ void setupShaders() {
     assert(skyboxOffsetLocation != 0xFFFFFFFF);
     skyboxSamplerLocation = glGetUniformLocation(skyboxShading.getName(), "textureSampler");
     assert(skyboxSamplerLocation != 0xFFFFFFFF);
+
+    flatShading.setupShaders(flatVertexShaderName, flatFragmentShaderName);
+    flatSamplerLocation = glGetUniformLocation(flatShading.getName(), "textureSampler");
+    assert(flatSamplerLocation != 0xFFFFFFFF);
+    flatOrientationMatrixLocation = glGetUniformLocation(flatShading.getName(), "orientation");
+    assert(flatOrientationMatrixLocation != 0xFFFFFFFF);
+    flatCameraMatrixLocation = glGetUniformLocation(flatShading.getName(), "camera");
+    assert(flatCameraMatrixLocation != 0xFFFFFFFF);
 }
 
 void setupTextures() {
@@ -401,7 +415,7 @@ void setupModels() {
     geom2.makeRandomMeteor(15,15,12,0.04f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
-    geomFlappy.loadOBJ("models/testUnit.obj", true);
+    geomFlappy.loadOBJ("models/FlappyDerpitor.obj", true);
     geomLazor.loadOBJ("models/lazor.obj", true);
 
     sphereMesh.makeMesh(geomSphere);

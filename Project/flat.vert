@@ -8,10 +8,13 @@ out vec2 texCoords;
 
 uniform float offset;
 
+uniform mat4 camera;
+uniform mat4 orientation;
+
 void main(void)
 {
-    gl_Position = vec4(pos, 1.0f);
+    gl_Position = camera * orientation * vec4(pos, 1.0f);
 
-    texCoords = vec2((texCoordsIn.x-offset)/3.0f, texCoordsIn.y);
+    texCoords = texCoordsIn;
 }
 
