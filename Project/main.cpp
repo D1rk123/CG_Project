@@ -171,7 +171,6 @@ void cleanupLazors() {
     for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
         if(iter->checkOutsideOfView(gCamera.matrix())) {
             iter = lazors.erase(iter);
-            cout << "Erasing lazor" << endl;
         }
     }
 }
@@ -212,6 +211,22 @@ void displayLazors () {
     }
 }
 
+void fillLazorPositionsArray(float * posArray, int amount) {
+    int i=0;
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end() && i<amount; iter++) {
+        i++;
+        posArray[i*3] = iter->getOrientation()[3][0];
+        posArray[i*3+1] = iter->getOrientation()[3][1];
+        posArray[i*3+2] = iter->getOrientation()[3][2];
+    }
+    while(i<amount) {
+        i++;
+        posArray[i*3] = 1000.0f;
+        posArray[i*3+1] = 1000.0f;
+        posArray[i*3+2] = 1000.0f;
+    }
+}
+
 
 static void display(void)
 {
@@ -244,9 +259,7 @@ static void display(void)
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
     float lazorPositions[30];
-    lazorPositions[0] = 0.5;
-    lazorPositions[1] = 0.0;
-    lazorPositions[2] = 0.0;
+    fillLazorPositionsArray(lazorPositions, 10);
     glUniform3fv(phongLazorPositionsLocation, 10, lazorPositions);
 
     displayFlappy();
