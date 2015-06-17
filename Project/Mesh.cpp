@@ -73,7 +73,7 @@ bool Mesh::testCollision(const Mesh& other) {
     mat4 myOrientation = orientation * ellip.orientation;
     mat4 myInvOrientation = glm::inverse(myOrientation);
     vec4 otherPositionInMyspace = myInvOrientation * otherPosition;
-    //take the staring point in the direction of the other ellipsoid
+    //take the starting point in the direction of the other ellipsoid
     vec3 point = glm::normalize(vec3(otherPositionInMyspace[0], otherPositionInMyspace[1], otherPositionInMyspace[2]));
 
     mat4 meToOther = glm::inverse(other.orientation * other.ellip.orientation) * myOrientation;

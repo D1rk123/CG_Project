@@ -17,6 +17,7 @@
 #include "Mesh.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
+#include "Camera.h"
 #include "BoundingEllipsoid.hpp"
 
 using namespace std;
@@ -32,19 +33,58 @@ list<Mesh> meshes;
 Mesh sphere = Mesh();
 Texture texture = Texture(), texture2 = Texture();
 mat4 cameraMat = mat4();
+
+int lastTime = glutGet(GLUT_ELAPSED_TIME);
+int timediff = 0;
+Camera gCamera;
+float deltaAngleX = 0.0f;
+float deltaAngleY = 0.0f;
+int xOrigin = -1;
+int yOrigin = -1;
+
 GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
+
+Texture textures[2];
+double frame;
+Texture lazorTexture0 = Texture();
+Texture lazorTexture1 = Texture();
+Texture lazorTexture2 = Texture();
+bool isDescending;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    cameraMat = glm::perspective(75.0f, ar, 0.1f, 100.f);
-    cameraMat = glm::translate(cameraMat, vec3(0.0f, 0.0f, -20.0f));
+    gCamera.setPosition(glm::vec3(0,0,4));
+    gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
+}
+
+
+void updateCamera(string direction)
+{
+    timediff = glutGet(GLUT_ELAPSED_TIME) - lastTime;
+
+    //move position of camera based on WASD keys
+    const float moveSpeed = 0.1; //units per second
+
+    if(direction.compare("zoomin")==0){
+        gCamera.offsetPosition(timediff * moveSpeed * -gCamera.forward());
+    } else if(direction.compare("zoomout")==0){
+        gCamera.offsetPosition(timediff * moveSpeed * gCamera.forward());
+    } else if(direction.compare("left")==0){
+        gCamera.offsetPosition(timediff * moveSpeed * -gCamera.right());
+    } else if(direction.compare("right")==0){
+        gCamera.offsetPosition(timediff * moveSpeed * gCamera.right());
+    } else if(direction.compare("up")==0){
+        gCamera.offsetPosition(timediff * moveSpeed * -glm::vec3(0,1,0));
+    } else if(direction.compare("down")==0){
+        gCamera.offsetPosition(timediff * moveSpeed * glm::vec3(0,1,0));
+    }
 }
 
 
@@ -56,20 +96,37 @@ static void display(void)
     //Select which shader program we use
     glUseProgram(shaderProgram.getName());
 
+    //rotate the model
+    lastTime = glutGet(GLUT_ELAPSED_TIME);
+    //cameraMat = glm::rotate(cameraMat, timediff*0.01f, vec3(0,1,0));
+
+    // send the camera matrix to the shader
+    //glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
+    glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
+
     if(!meshes.back().testCollision(meshes.front())) {
         //move the model
         meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
         meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
     }
+//    meshes.front().transform( glm::translate( vec3(-0.001f,0.0f,0.0f) ) );
 
-    //send the camera matrix to the shader
-    glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
+//    if(!meshes.back().testCollision(meshes.front())) {
+//        //move the model
+//        meshes.front().transform(glm::rotate(0.5f, vec3(0.0f, 1.0f, 0.0f)));
+////        meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
+//    }
+
     //send the texture selection to the shader
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
-        glBindTexture(GL_TEXTURE_2D, texture.getName());
+//        glBindTexture(GL_TEXTURE_2D, texture.getName());
+
+        // Load texture at frame
+        glBindTexture( GL_TEXTURE_2D, textures[(int)frame].getName() );
+
         //send the orientation matrix to the shader
         glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
 
@@ -88,10 +145,58 @@ static void display(void)
         }
     }
 
+    if(!isDescending) {
+        if(frame <= 3) {
+            frame += 0.01;
+        }else{
+            isDescending = true;
+        }
+    }
+    //Check frame
+    if (isDescending)
+    {
+        if(frame >= 0){
+            frame -= 0.01;
+        }else{
+            isDescending = false;
+        }
+    }
+
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
 }
 
+static void mouseClick(int button, int state, int x, int y)
+{
+	// only start motion if the left button is pressed
+	if (button == GLUT_LEFT_BUTTON) {
+
+		// when the button is released
+		if (state == GLUT_UP) {
+			xOrigin = -1;
+			yOrigin = -1;
+		}
+		else  {// state = GLUT_DOWN
+			xOrigin = x;
+			yOrigin = y;
+		}
+	}
+}
+
+static void mouseMove(int x, int y)
+{
+	// this will only be true when the left button is down
+	if (xOrigin >= 0) {
+
+		// update deltaAngle
+		deltaAngleX = (x - xOrigin) * 0.0025f;
+		deltaAngleY = (y - yOrigin) * 0.0025f;
+
+		// update camera's direction
+        gCamera.offsetOrientation(-deltaAngleY, -deltaAngleX);
+
+	}
+}
 
 static void key(unsigned char key, int x, int y)
 {
@@ -103,6 +208,24 @@ static void key(unsigned char key, int x, int y)
     {
         case 'q':
             exit(0);
+            break;
+        case 's':
+            updateCamera("zoomin");
+            break;
+        case 'w':
+            updateCamera("zoomout");
+            break;
+        case 'a':
+            updateCamera("left");
+            break;
+        case 'd':
+            updateCamera("right");
+            break;
+        case 'x':
+            updateCamera("down");
+            break;
+        case 'z':
+            updateCamera("up");
             break;
         case 'l':
             drawEllips = !drawEllips;
@@ -120,7 +243,7 @@ static void idle(void)
 //Program entry point
 int main(int argc, char *argv[])
 {
-    //Initialize GLUT and create window in wich we can draw using OpenGL
+    //Initialize GLUT and create window in which we can draw using OpenGL
     glutInit(&argc, argv);
     glutInitWindowSize(640,480);
     glutInitWindowPosition(10,10);
@@ -159,6 +282,8 @@ int main(int argc, char *argv[])
     glutReshapeFunc(resize);
     glutDisplayFunc(display);
     glutKeyboardFunc(key);
+    glutMouseFunc(mouseClick);
+    glutMotionFunc(mouseMove);
     glutIdleFunc(idle);
 
     glClearColor(0,0,0,1);
@@ -188,9 +313,9 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    //geom1.loadOBJ("models/Satellite1.obj", false);
-    geom1.makeRandomMeteor(15,15,12,0.04f);
-    geom2.makeRandomMeteor(15,15,12,0.04f);
+    geom1.loadOBJ("models/lazor.obj", true);
+//    geom1.makeRandomMeteor(15,15,12,0.04f);
+//    geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
 
@@ -198,20 +323,29 @@ int main(int argc, char *argv[])
     sphere.makeMesh(geomSphere);
 
     meshes.push_back(Mesh(geom1));
-    meshes.push_back(Mesh(geom2));
+//    meshes.push_back(Mesh(geom2));
 
     //clear geometry memory, because it had been copied to the video card
     geom1.remove();
-    geom2.remove();
+//    geom2.remove();
     geomSphere.remove();
 
-    meshes.front().transform( glm::translate( vec3(-10.0f,0.0f,0.0f) ) );
+    meshes.front().transform( glm::translate( vec3(0.0f,0.0f,0.0f) ) );
+    meshes.front().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
+
     //meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
 
     //cout << glm::to_string(sphere.getOrientation() ) << endl;
 
     //Load a texture
-    texture.load("textures/meteor.jpg");
+    lazorTexture0.load("textures/lazor0.jpg");
+    lazorTexture1.load("textures/lazor1.jpg");
+    lazorTexture2.load("textures/lazor2.jpg");
+
+    textures[0] = lazorTexture0;
+    textures[1] = lazorTexture1;
+    textures[2] = lazorTexture2;
+
     //Load a texture
     texture2.load("textures/white.png");
 

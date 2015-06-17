@@ -6,6 +6,7 @@ in vec3 vert;
 
 out vec4 colorOut;
 
+
 uniform sampler2D textureSampler;
 
 void main(void)

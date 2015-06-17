@@ -16,6 +16,9 @@
 					<Add option="-Wextra" />
 					<Add option="-Wall" />
 					<Add option="-g" />
+					<Add directory="include" />
+					<Add directory="Headers" />
+					<Add directory="../Project" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -26,6 +29,9 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add directory="include" />
+					<Add directory="Headers" />
+					<Add directory="../Project" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -51,11 +57,18 @@
 			<Add directory="../Libraries/glew-1.10.0/lib" />
 			<Add directory="../Libraries/DevIL-x86-1.7.8/lib" />
 		</Linker>
+<<<<<<< HEAD
+		<Unit filename="Camera.cpp" />
+		<Unit filename="Camera.h" />
+		<Unit filename="Geometry.cpp" />
+		<Unit filename="Geometry.hpp" />
+=======
 		<Unit filename="BoundingEllipsoid.cpp" />
 		<Unit filename="BoundingEllipsoid.hpp" />
 		<Unit filename="Geometry.cpp" />
 		<Unit filename="Geometry.hpp" />
 		<Unit filename="Mesh.cpp" />
+>>>>>>> eb03f4768ee0de3acf14c001d6a3002c9155ea3b
 		<Unit filename="Mesh.hpp" />
 		<Unit filename="ShaderProgram.hpp" />
 		<Unit filename="Texture.hpp" />
