@@ -12,38 +12,34 @@ struct Lazor
     bool isDescending;
     float speed;
 
-
     Lazor() {
         isDescending = true;
     }
 
     Lazor(glm::mat4 orientation, glm::vec3 direction) {
-        this->orientation = orientation;
+        this->orientation = orientation * glm::rotate(90.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         this->direction = direction;
         isDescending = true;
-        speed = 10;
+        speed = 3.0f;
+        frame = 2.0f;
     }
 
     void update(float time) {
         // Laser animation
         if(!isDescending) {
-            if(frame <= 3) {
-                frame += 0.01;
-            }else{
+            frame += time * 10.0f;
+            if(frame > 3.0f) {
                 isDescending = true;
+                frame = 2.99;
             }
-        }
-
-        if (isDescending)
-        {
-            if(frame >= 0){
-                frame -= 0.01;
-            }else{
+        } else {
+            frame -= time * 10.0f;
+            if(frame < 0){
                 isDescending = false;
+                frame = 0.0f;
             }
         }
-
-        orientation = glm::translate(direction*time*speed)*orientation;
+        orientation = glm::translate(direction*time*speed) * orientation;
     }
 };
 

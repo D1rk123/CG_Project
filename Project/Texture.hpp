@@ -39,7 +39,13 @@ class Texture
             return false;
         }
         // convert the image to a format openGL can use
-        if(ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE) == IL_FALSE)
+        /*ILenum ilColorType;
+        if (alpha)
+            ilColorType = IL_RGBA;
+        else
+            ilColorType = IL_RGB*/
+
+        if(ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE) == IL_FALSE)
         {
             ilDeleteImages(1, &imageName);
             cout << "Error: Converting the texture is impossible." << endl;
@@ -52,11 +58,14 @@ class Texture
         glBindTexture(GL_TEXTURE_2D, name);
 
         // load the texture data
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB, GL_UNSIGNED_BYTE, ilGetData());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGBA, GL_UNSIGNED_BYTE, ilGetData());
 
         //Set texture filtering parameters
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
 
         // because we copied the image we can delete the original data
         ilDeleteImages(1, &imageName);
@@ -86,7 +95,6 @@ class Texture
         assert(loaded == true);
         return name;
     }
-\
     inline void remove()
     {
         if (loaded)

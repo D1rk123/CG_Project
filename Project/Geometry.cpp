@@ -52,7 +52,9 @@ bool Geometry::loadOBJ(const char * path, bool hasTexture)
             std::string vertex1, vertex2, vertex3;
             unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
             if(hasTexture) {
-                int amount = fscanf(file, " %d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2]);
+                int amount = fscanf(file, " %d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0],
+                                                                           &vertexIndex[1], &uvIndex[1], &normalIndex[1],
+                                                                           &vertexIndex[2], &uvIndex[2], &normalIndex[2]);
                 if(amount != 9) {
                     printf("Obj file is invalid for this parser.");
                     return false;
@@ -87,9 +89,11 @@ bool Geometry::loadOBJ(const char * path, bool hasTexture)
 
     for(GLsizei i = 0; i < numIndices; i++) {
         if(hasTexture) {
-            vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], temp_uvs[uvIndices[i]-1]);
+            vec2 flippeduvs = temp_uvs[uvIndices[i]-1];
+            vec2 uvs = vec2(flippeduvs.x, 1.0f-flippeduvs.y);
+            vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], uvs);
         } else {
-            vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], glm::vec2(0.0, 0.0));
+            vertices[i] = Vertex(temp_vertices[vertexIndices[i]-1], temp_normals[normalIndices[i]-1], vec2(0.0, 0.0));
         }
         indices[i] = i;
     }
@@ -97,7 +101,7 @@ bool Geometry::loadOBJ(const char * path, bool hasTexture)
 }
 
 glm::vec3 Geometry::calcTriangleNormal(GLuint* indices) {
-    vec3 edge1 = vertices[indices[0]].pos   - vertices[indices[1]].pos;
+    vec3 edge1 = vertices[indices[0]].pos - vertices[indices[1]].pos;
     vec3 edge2 = vertices[indices[2]].pos - vertices[indices[1]].pos;
 
     return glm::normalize(glm::cross(edge2, edge1));
@@ -342,4 +346,23 @@ BoundingEllipsoid Geometry::approxBoundingEllipsoid() const {
     //cout << glm::to_string(result) << endl;
 
     return BoundingEllipsoid(result, radius[0]);
+}
+
+void Geometry::makeQuad() {
+    numVertices = 4;
+    numIndices = 6;
+    vertices = new Vertex[4];
+    indices = new unsigned int[6];
+
+    vertices[0] = Vertex(vec3(-1.0f, -1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 0.0f));
+    vertices[1] = Vertex(vec3(-1.0f,  1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f));
+    vertices[2] = Vertex(vec3(1.0f,  -1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f));
+    vertices[3] = Vertex(vec3(1.0f,   1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 1.0f));
+
+    indices[0] = 2;
+    indices[1] = 1;
+    indices[2] = 0;
+    indices[3] = 2;
+    indices[4] = 3;
+    indices[5] = 1;
 }

@@ -65,6 +65,7 @@
 		<Unit filename="FlappyBird.hpp" />
 		<Unit filename="Geometry.cpp" />
 		<Unit filename="Geometry.hpp" />
+		<Unit filename="Lazor.hpp" />
 		<Unit filename="Mesh.cpp" />
 		<Unit filename="Mesh.hpp" />
 		<Unit filename="ShaderProgram.hpp" />

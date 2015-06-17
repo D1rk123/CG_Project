@@ -37,6 +37,8 @@ class Geometry {
             delete [] vertices;
             assert(indices != 0);
             delete [] indices;
+            vertices = 0;
+            indices = 0;
         }
     }
     ~Geometry() {
@@ -54,6 +56,7 @@ class Geometry {
     public:
     void makeRandomMeteor(int numSeg, int numRing, int numDirections, float noiseLength);
     void makeSphere(int numSeg, int numRing);
+    void makeQuad();
 
     //BoundingSphere approxBoundingSphere();
     BoundingEllipsoid approxBoundingEllipsoid() const;

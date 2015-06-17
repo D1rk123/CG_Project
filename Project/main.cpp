@@ -29,14 +29,17 @@ using glm::vec3;
 using glm::mat4;
 using std::list;
 
-const char* vertexShaderName = "minimal.vert";
-const char* fragmentShaderName = "minimal.frag";
-ShaderProgram shaderProgram = ShaderProgram();
+const char* skyboxVertexShaderName = "skybox.vert";
+const char* skyboxFragmentShaderName = "skybox.frag";
+const char* phongVertexShaderName = "minimal.vert";
+const char* phongFragmentShaderName = "minimal.frag";
+
+ShaderProgram phongShading, skyboxShading;
 list<Mesh> meshes;
-Mesh sphere, lazorMesh;
+Mesh sphereMesh, lazorMesh, skyboxMesh, flappyMesh;
 FlappyBird bird = FlappyBird();
 
-Texture texture = Texture(), texture2 = Texture();
+Texture meteorTexture, sphereTexture, skyboxTexture, flappyTexture;
 mat4 cameraMat = mat4();
 
 int lastTime;
@@ -47,30 +50,25 @@ float deltaAngleX = 0.0f;
 float deltaAngleY = 0.0f;
 int xOrigin = -1;
 int yOrigin = -1;
-
-float energyRate = 0.01f;
 bool jumped = false;
 
-GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
+GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation;
+GLuint skyboxOffsetLocation, skyboxSamplerLocation;
+
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
 
-Texture textures[2];
+Texture lazorTextures[3];
 double frame;
-Texture lazorTexture0 = Texture();
-Texture lazorTexture1 = Texture();
-Texture lazorTexture2 = Texture();
 bool isShot;
-int maxNumLasers = 5;
-vector<Lazor> lasers;
+int maxNumLazors = 5;
+vector<Lazor> lazors;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-
-    gCamera.setPosition(glm::vec3(0.0f,0.0f,50.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -104,18 +102,40 @@ float getTimeFactorBetweenUpdates() {
     return timeseconds*factor;
 }
 
+void displaySkyBox() {
+    glUseProgram(skyboxShading.getName());
 
-void updateBirdMovement() {
-    bird.changeEnergy(energyRate);
+    glDisable(GL_DEPTH_TEST);
 
-    // update flymovement
-    bird.increaseFallVelocity(getTimeFactorBetweenUpdates());
-    glm::vec3 update = bird.getMesh()->getMovement()*getTimeFactorBetweenUpdates();
+    glBindTexture( GL_TEXTURE_2D, skyboxTexture.getName() );
 
-    bird.getMesh()->transform(glm::translate(update));
+    float offset = gCamera.matrix()[3][0]/50.0f;
 
-    // make camera move with bird
-    gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
+    glUniform1f(skyboxOffsetLocation, offset);
+    glUniform1i(skyboxSamplerLocation, 0/*GL_TEXTURE0*/);
+
+    skyboxMesh.draw();
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+void displayFlappy() {
+    // Load texture at frame
+    glBindTexture( GL_TEXTURE_2D, flappyTexture.getName() );
+
+    //send the orientation matrix to the shader
+    glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(flappyMesh.getOrientation()));
+
+    flappyMesh.draw();
+}
+
+void displayLazors () {
+    for(size_t i=0; i<lazors.size(); i++) {
+        lazors[i].update(getTimeFactorBetweenUpdates());
+        glBindTexture( GL_TEXTURE_2D, lazorTextures[(int)lazors[i].frame].getName() );
+        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lazors[i].orientation));
+        lazorMesh.draw();
+    }
 }
 
 
@@ -127,58 +147,46 @@ static void display(void)
     //Clear the render buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glActiveTexture(GL_TEXTURE0);
+
+    // make camera move with bird
+    gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
+    bird.update(getTimeFactorBetweenUpdates());
+
+    displaySkyBox();
+
     //Select which shader program we use
-    glUseProgram(shaderProgram.getName());
+    glUseProgram(phongShading.getName());
 
     // send the camera matrix to the shader
-    glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
-
-    // Update gravity for bird
-    updateBirdMovement();
-
-    // Find rotation matrix to make flappybird face in direction of movement
-    glm::vec3 dir = glm::normalize(bird.getMesh()->getMovement());
-    glm::vec3 z = glm::vec3(0.0f,0.0f,1.0f);
-    glm::vec3 cross = glm::cross(dir,z);
-    glm::mat4 flightRotation = glm::mat4(glm::vec4(dir, 0.0f), glm::vec4(z,0.0f), glm::vec4(cross, 0.0f), glm::vec4(0,0,0,1.0f));
-
-   //if(!meshes.back().testCollision(meshes.front())) {
-        //move the model
-
-    //    meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
-    //    meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
-    //}
+    //glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
+    glUniformMatrix4fv(phongCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
 
     //send the texture selection to the shader
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
+    glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
-    for(int i=0; i<lasers.size(); i++) {
-        lasers[i].update(getTimeFactorBetweenUpdates());
-        glBindTexture( GL_TEXTURE_2D, textures[(int)lasers[i].frame].getName() );
-        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lasers[i].orientation));
-        lazorMesh.draw();
-    }
-
+    displayFlappy();
+    displayLazors();
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
 
         // Load texture at frame
+        glBindTexture( GL_TEXTURE_2D, meteorTexture.getName() );
+
         //send the orientation matrix to the shader
-        glm::mat4 sendOrientation = iter->getOrientation()*flightRotation;
-        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(sendOrientation));
+        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
 
         iter->draw();
 
         if(drawEllips) {
             glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-            glBindTexture(GL_TEXTURE_2D, texture2.getName());
+            glBindTexture(GL_TEXTURE_2D, sphereTexture.getName());
 
-            mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation * flightRotation;
+            mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
             //send the orientation matrix to the shader
-            glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
-            sphere.draw();
+            glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
+            sphereMesh.draw();
 
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
         }
@@ -224,6 +232,11 @@ static void mouseMove(int x, int y)
 
 
 static void keyUp(unsigned char key, int x, int y) {
+    //empty if statement to remove unused argument warning
+    if(x == y)
+    {
+    }
+
     if (key == ' ') {
         jumped = false;
     }
@@ -234,16 +247,16 @@ static void shootLazor()
     mat4 orientation = bird.getMesh()->getOrientation();
     vec3 direction = bird.getMesh()->getMovement();
 
-    lasers.push_back(Lazor(orientation, direction));
+    lazors.push_back(Lazor(orientation, direction));
 }
 
 static void key(unsigned char key, int x, int y)
 {
     //empty if statement to remove unused argument warning
-
     if(x == y)
     {
     }
+
     switch (key)
     {
         case 'q':
@@ -289,10 +302,8 @@ static void idle(void)
     glutPostRedisplay();
 }
 
-//Program entry point
-int main(int argc, char *argv[])
-{
-    //Initialize GLUT and create window in which we can draw using OpenGL
+bool setupOpenGL (int argc, char *argv[]) {
+        //Initialize GLUT and create window in which we can draw using OpenGL
     glutInit(&argc, argv);
     glutInitWindowSize(640,480);
     glutInitWindowPosition(10,10);
@@ -305,7 +316,7 @@ int main(int argc, char *argv[])
     if (res != GLEW_OK)
     {
         cout << "Error: " << glewGetErrorString(res);
-        return 1;
+        return false;
     }
 
     const char* version = (const char*)glGetString(GL_VERSION);
@@ -315,7 +326,7 @@ int main(int argc, char *argv[])
     if (!glewIsSupported("GL_VERSION_3_3"))
     {
         cout << "GLEW version out of date: please update your videocard driver" << endl;
-        return 1;
+        return false;
     }
 
     //Check if the version of DevIL in the .dll-file is the same or a newer version then the one the engine is compiled with.
@@ -323,7 +334,7 @@ int main(int argc, char *argv[])
     if(ilGetInteger(IL_VERSION_NUM) < IL_VERSION)
     {
         cout << "DevIL version out of date: please update the dll file." << endl;
-        return 1;
+        return false;
     }
     ilInit();
 
@@ -349,63 +360,84 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    //Set up shaders
-    shaderProgram.setupShaders(vertexShaderName, fragmentShaderName);
-    //Set uniform variable locations
-    cameraMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "camera");
-    assert(cameraMatrixLocation != 0xFFFFFFFF);
-    samplerLocation = glGetUniformLocation(shaderProgram.getName(), "textureSampler");
-    assert(samplerLocation != 0xFFFFFFFF);
-    orientationMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "orientation");
-    assert(orientationMatrixLocation != 0xFFFFFFFF);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    //seed the random number generator
-    srand(time(0));
+    return true;
+}
 
-    Geometry geom1, geom2, geomSphere;
-//    geom1.loadOBJ("models/FlappyDerpitor.obj", true);
-    //geom1.loadOBJ("models/testUnit.obj", true);
-    geom1.loadOBJ("models/Satellite1.obj", false);
+void setupShaders() {
+    phongShading.setupShaders(phongVertexShaderName, phongFragmentShaderName);
+    phongCameraMatrixLocation = glGetUniformLocation(phongShading.getName(), "camera");
+    assert(phongCameraMatrixLocation != 0xFFFFFFFF);
+    phongSamplerLocation = glGetUniformLocation(phongShading.getName(), "textureSampler");
+    assert(phongSamplerLocation != 0xFFFFFFFF);
+    phongOrientationMatrixLocation = glGetUniformLocation(phongShading.getName(), "orientation");
+    assert(phongOrientationMatrixLocation != 0xFFFFFFFF);
 
+    skyboxShading.setupShaders(skyboxVertexShaderName, skyboxFragmentShaderName);
+    skyboxOffsetLocation = glGetUniformLocation(skyboxShading.getName(), "offset");
+    assert(skyboxOffsetLocation != 0xFFFFFFFF);
+    skyboxSamplerLocation = glGetUniformLocation(skyboxShading.getName(), "textureSampler");
+    assert(skyboxSamplerLocation != 0xFFFFFFFF);
+}
+
+void setupTextures() {
+    meteorTexture.load("textures/meteor.jpg");
+    flappyTexture.load("textures/camoFlap.png");
+    sphereTexture.load("textures/white.png");
+    skyboxTexture.load("textures/skybox.png");
+
+    lazorTextures[0].load("textures/lazor0.png");
+    lazorTextures[1].load("textures/lazor1.png");
+    lazorTextures[2].load("textures/lazor2.png");
+}
+
+void setupModels() {
+    Geometry geom1, geom2, geomSphere, geomSkybox, geomFlappy, geomLazor;
+
+    //Make geometry
+    geom1.makeRandomMeteor(15,15,12,0.05f);
     geom2.makeRandomMeteor(15,15,12,0.04f);
-    //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
-//    geom1.loadOBJ("models/FlappyBirdSmooth.obj", true);
-//    geom1.makeRandomMeteor(15,15,12,0.04f);
-//    geom2.makeRandomMeteor(15,15,12,0.04f);
     geomSphere.makeSphere(20, 20);
+    geomSkybox.makeQuad();
+    geomFlappy.loadOBJ("models/testUnit.obj", true);
+    geomLazor.loadOBJ("models/lazor.obj", true);
 
-    //Make a mesh
-    sphere.makeMesh(geomSphere);
+    sphereMesh.makeMesh(geomSphere);
+    skyboxMesh.makeMesh(geomSkybox);
+    flappyMesh.makeMesh(geomFlappy);
+    lazorMesh.makeMesh(geomLazor);
 
-    //Make laser mesh
-    Geometry lazor;
-    lazor.loadOBJ("models/lazor.obj", true);
-    lazorMesh.makeMesh(lazor);
-    lasers.reserve(maxNumLasers);
+    lazors.reserve(maxNumLazors);
 
     meshes.push_back(Mesh(geom1));
     meshes.push_back(Mesh(geom2));
-    bird = FlappyBird(&meshes.front());
+
+    bird = FlappyBird(&flappyMesh);
     bird.startFlying();
 
     //clear geometry memory, because it had been copied to the video card
     geom1.remove();
     geom2.remove();
     geomSphere.remove();
+    geomSkybox.remove();
+    geomFlappy.remove();
+    geomLazor.remove();
+}
 
-    //Load a texture
-    texture.load("textures/camoFlap.png");
+//Program entry point
+int main(int argc, char *argv[])
+{
+    setupOpenGL(argc, argv);
+    setupShaders();
+    setupTextures();
+    setupModels();
 
-    lazorTexture0.load("textures/lazor0.jpg");
-    lazorTexture1.load("textures/lazor1.jpg");
-    lazorTexture2.load("textures/lazor2.jpg");
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,24.0f));
 
-    textures[0] = lazorTexture0;
-    textures[1] = lazorTexture1;
-    textures[2] = lazorTexture2;
-
-    //Load a texture
-    texture2.load("textures/white.png");
+    //seed the random number generator
+    srand(time(0));
 
     lastTime = glutGet(GLUT_ELAPSED_TIME);
     //Start the GLUT loop
