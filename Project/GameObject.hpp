@@ -73,6 +73,10 @@ class GameObject {
         return collided;
     }
 
+    void setCollided(bool collided) {
+        this->collided = collided;
+    }
+
     glm::vec3 getMovement() {
         return movement;
     }

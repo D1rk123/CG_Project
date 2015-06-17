@@ -158,9 +158,11 @@ void testCollisions() {
     }
     if(bird.getCollided()) {
         cout << "GAME OVER!" << endl;
+        bird.setCollided(false);
     }
     if (bird.touchingGround(gCamera.getHeightOfView())) {
         cout << "GAME OVER!" << endl;
+        bird.setCollided(false);
         //bird.setMovement(glm::vec3(0.0f));
     }
     for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
@@ -219,7 +221,6 @@ void cleanupMeteors() {
         if(iter->checkAwayFromFlappy(bird.getOrientation()[3][0])) {
             iter = meteors.erase(iter);
             currAmountOfMeteors--;
-            cout << "Erasing meteor" << endl;
         }
     }
 }
