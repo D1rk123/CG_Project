@@ -3,20 +3,27 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
+#include "GameObject.hpp"
+#include "Texture.hpp"
 
-struct Lazor
+class Lazor: public GameObject
 {
-    glm::mat4 orientation;
+    static Texture lazorTextures[3];
     double frame;
     glm::vec3 direction;
     bool isDescending;
     float speed;
 
-    Lazor() {
-        isDescending = true;
+    public:
+    static void loadLazorTextures() {
+
     }
 
-    Lazor(glm::mat4 orientation, glm::vec3 direction) {
+    size_t getTextureIndex() {
+        return (size_t)frame;
+    }
+
+    Lazor(glm::mat4 orientation, glm::vec3 direction, Mesh* mesh) : GameObject(mesh) {
         this->orientation = orientation * glm::rotate(90.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         this->direction = direction;
         isDescending = true;

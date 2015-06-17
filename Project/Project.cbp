@@ -63,6 +63,8 @@
 		<Unit filename="Camera.h" />
 		<Unit filename="FlappyBird.cpp" />
 		<Unit filename="FlappyBird.hpp" />
+		<Unit filename="GameObject.cpp" />
+		<Unit filename="GameObject.hpp" />
 		<Unit filename="Geometry.cpp" />
 		<Unit filename="Geometry.hpp" />
 		<Unit filename="Lazor.hpp" />

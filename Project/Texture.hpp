@@ -7,6 +7,10 @@
 #include <IL/ilut.h>
 #include <GL/glew.h>
 
+
+using std::cout;
+using std::endl;
+using std::string;
 /**
  @brief Loads 2D textures from files into OpenGL.
 */
@@ -16,7 +20,7 @@ class Texture
     bool loaded;
 
     public:
-    bool load(std::string fileName)
+    bool load(string fileName)
     {
         if(loaded)
         {

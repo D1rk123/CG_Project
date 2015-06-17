@@ -37,12 +37,14 @@ const char* flatVertexShaderName = "flat.vert";
 const char* flatFragmentShaderName = "flat.frag";
 
 ShaderProgram phongShading, skyboxShading, flatShading;
-list<Mesh> meshes;
+
+list<Mesh> meteorMeshes;
 Mesh sphereMesh, lazorMesh, skyboxMesh, flappyMesh;
-FlappyBird bird = FlappyBird();
+
+FlappyBird bird;
 
 Texture meteorTexture, sphereTexture, skyboxTexture, flappyTexture;
-mat4 cameraMat = mat4();
+Texture lazorTextures[3];
 
 int lastTime;
 int diffTime;
@@ -61,11 +63,8 @@ GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocat
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
 
-Texture lazorTextures[3];
-double frame;
-bool isShot;
-int maxNumLazors = 5;
 vector<Lazor> lazors;
+vector<GameObject> meteors;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -127,18 +126,53 @@ void displayFlappy() {
     glBindTexture( GL_TEXTURE_2D, flappyTexture.getName() );
 
     //send the orientation matrix to the shader
-    glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(flappyMesh.getOrientation()));
+    glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(bird.getOrientation()));
 
     flappyMesh.draw();
 }
+
+//void displayMeteors () {
+//    // Load texture at frame
+//    glBindTexture( GL_TEXTURE_2D, meteorTexture.getName() );
+//    for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
+//        //send the orientation matrix to the shader
+//        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
+//
+//        iter->draw();
+//    }
+//}
+//void displayEllipsoids () {
+//    if(drawEllips) {
+//        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+//
+//        glBindTexture(GL_TEXTURE_2D, sphereTexture.getName());
+//
+//        mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
+//        //send the orientation matrix to the shader
+//        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
+//        sphereMesh.draw();
+//
+//        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+//    }
+//}
+
+//void collectEllipsoids (list<const BoundingEllipsoid*>* ellipsoidList) {
+//    ellipsoidList->push_back(flappyMesh.getEllip());
+//    for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
+//        ellipsoidList->push_back(iter->getEllip());
+//    }
+//    /*for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
+//        ellipsoidList->push_back(iter->getEllip());
+//    }*/
+//}
 
 void displayLazors () {
     glUseProgram(flatShading.getName());
     glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
     for(size_t i=0; i<lazors.size(); i++) {
         lazors[i].update(getTimeFactorBetweenUpdates());
-        glBindTexture( GL_TEXTURE_2D, lazorTextures[(int)lazors[i].frame].getName() );
-        glUniformMatrix4fv(flatOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lazors[i].orientation));
+        glBindTexture( GL_TEXTURE_2D, lazorTextures[lazors[i].getTextureIndex()].getName());
+        glUniformMatrix4fv(flatOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lazors[i].getOrientation()));
         lazorMesh.draw();
     }
 }
@@ -164,7 +198,6 @@ static void display(void)
     glUseProgram(phongShading.getName());
 
     // send the camera matrix to the shader
-    //glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
     glUniformMatrix4fv(phongCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
 
     //send the texture selection to the shader
@@ -172,29 +205,9 @@ static void display(void)
 
     displayFlappy();
 
-    for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
+    list<BoundingEllipsoid*> ellipsoidList;
 
-        // Load texture at frame
-        glBindTexture( GL_TEXTURE_2D, meteorTexture.getName() );
-
-        //send the orientation matrix to the shader
-        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
-
-        iter->draw();
-
-        if(drawEllips) {
-            glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-
-            glBindTexture(GL_TEXTURE_2D, sphereTexture.getName());
-
-            mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
-            //send the orientation matrix to the shader
-            glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
-            sphereMesh.draw();
-
-            glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-        }
-    }
+    //displayEllipsoids(ellipsoidList);
 
     displayLazors();
 
@@ -250,10 +263,10 @@ static void keyUp(unsigned char key, int x, int y) {
 
 static void shootLazor()
 {
-    mat4 orientation = bird.getMesh()->getOrientation();
-    vec3 direction = bird.getMesh()->getMovement();
+    mat4 orientation = bird.getOrientation();
+    vec3 direction = bird.getMovement();
 
-    lazors.push_back(Lazor(orientation, direction));
+    lazors.push_back(Lazor(orientation, direction, &lazorMesh));
 }
 
 static void key(unsigned char key, int x, int y)
@@ -408,11 +421,10 @@ void setupTextures() {
 }
 
 void setupModels() {
-    Geometry geom1, geom2, geomSphere, geomSkybox, geomFlappy, geomLazor;
+    Geometry geomSphere, geomSkybox, geomFlappy, geomLazor;
 
     //Make geometry
-    geom1.makeRandomMeteor(15,15,12,0.05f);
-    geom2.makeRandomMeteor(15,15,12,0.04f);
+    //geom1.makeRandomMeteor(15,15,12,0.05f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
     geomFlappy.loadOBJ("models/FlappyDerpitor.obj", true);
@@ -423,17 +435,10 @@ void setupModels() {
     flappyMesh.makeMesh(geomFlappy);
     lazorMesh.makeMesh(geomLazor);
 
-    lazors.reserve(maxNumLazors);
-
-    meshes.push_back(Mesh(geom1));
-    meshes.push_back(Mesh(geom2));
-
-    bird = FlappyBird(&flappyMesh);
+    bird.setMesh(&flappyMesh);
     bird.startFlying();
 
     //clear geometry memory, because it had been copied to the video card
-    geom1.remove();
-    geom2.remove();
     geomSphere.remove();
     geomSkybox.remove();
     geomFlappy.remove();
