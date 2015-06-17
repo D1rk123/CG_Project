@@ -26,12 +26,16 @@ using glm::vec3;
 using glm::mat4;
 using std::list;
 
-const char* vertexShaderName = "minimal.vert";
-const char* fragmentShaderName = "minimal.frag";
-ShaderProgram shaderProgram = ShaderProgram();
+const char* skyboxVertexShaderName = "skybox.vert";
+const char* skyboxFragmentShaderName = "skybox.frag";
+const char* phongVertexShaderName = "minimal.vert";
+const char* phongFragmentShaderName = "minimal.frag";
+
+ShaderProgram phongShading, skyboxShading;
 list<Mesh> meshes;
-Mesh sphere = Mesh();
-Texture texture = Texture(), texture2 = Texture();
+Mesh sphere;
+Mesh skybox;
+Texture texture, sphereTexture, skyboxTexture;
 mat4 cameraMat = mat4();
 
 int lastTime = glutGet(GLUT_ELAPSED_TIME);
@@ -42,7 +46,9 @@ float deltaAngleY = 0.0f;
 int xOrigin = -1;
 int yOrigin = -1;
 
-GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
+GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation;
+GLuint skyboxOffsetLocation, skyboxSamplerLocation;
+
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
 
@@ -87,14 +93,35 @@ void updateCamera(string direction)
     }
 }
 
+void displaySkyBox() {
+    glUseProgram(skyboxShading.getName());
+
+    glDisable(GL_DEPTH_TEST);
+
+    glBindTexture( GL_TEXTURE_2D, skyboxTexture.getName() );
+
+    float offset = gCamera.matrix()[3][0]/50.0f;
+
+    glUniform1f(skyboxOffsetLocation, offset);
+    glUniform1i(skyboxSamplerLocation, 0/*GL_TEXTURE0*/);
+
+    skybox.draw();
+
+    glEnable(GL_DEPTH_TEST);
+}
+
 
 static void display(void)
 {
     //Clear the render buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glActiveTexture(GL_TEXTURE0);
+
+    displaySkyBox();
+
     //Select which shader program we use
-    glUseProgram(shaderProgram.getName());
+    glUseProgram(phongShading.getName());
 
     //rotate the model
     lastTime = glutGet(GLUT_ELAPSED_TIME);
@@ -102,7 +129,7 @@ static void display(void)
 
     // send the camera matrix to the shader
     //glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
-    glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
+    glUniformMatrix4fv(phongCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
 
     if(!meshes.back().testCollision(meshes.front())) {
         //move the model
@@ -118,8 +145,7 @@ static void display(void)
 //    }
 
     //send the texture selection to the shader
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
+    glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
 //        glBindTexture(GL_TEXTURE_2D, texture.getName());
@@ -128,17 +154,17 @@ static void display(void)
         glBindTexture( GL_TEXTURE_2D, texture.getName() );
 
         //send the orientation matrix to the shader
-        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
+        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
 
         iter->draw();
         if(drawEllips) {
             glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-            glBindTexture(GL_TEXTURE_2D, texture2.getName());
+            glBindTexture(GL_TEXTURE_2D, sphereTexture.getName());
 
             mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
             //send the orientation matrix to the shader
-            glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
+            glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
             sphere.draw();
 
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -300,52 +326,62 @@ int main(int argc, char *argv[])
     glDepthFunc(GL_LESS);
 
     //Set up shaders
-    shaderProgram.setupShaders(vertexShaderName, fragmentShaderName);
+    phongShading.setupShaders(phongVertexShaderName, phongFragmentShaderName);
     //Set uniform variable locations
-    cameraMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "camera");
-    assert(cameraMatrixLocation != 0xFFFFFFFF);
-    samplerLocation = glGetUniformLocation(shaderProgram.getName(), "textureSampler");
-    assert(samplerLocation != 0xFFFFFFFF);
-    orientationMatrixLocation = glGetUniformLocation(shaderProgram.getName(), "orientation");
-    assert(orientationMatrixLocation != 0xFFFFFFFF);
+    phongCameraMatrixLocation = glGetUniformLocation(phongShading.getName(), "camera");
+    assert(phongCameraMatrixLocation != 0xFFFFFFFF);
+    phongSamplerLocation = glGetUniformLocation(phongShading.getName(), "textureSampler");
+    assert(phongSamplerLocation != 0xFFFFFFFF);
+    phongOrientationMatrixLocation = glGetUniformLocation(phongShading.getName(), "orientation");
+    assert(phongOrientationMatrixLocation != 0xFFFFFFFF);
+
+    skyboxShading.setupShaders(skyboxVertexShaderName, skyboxFragmentShaderName);
+    skyboxOffsetLocation = glGetUniformLocation(skyboxShading.getName(), "offset");
+    assert(skyboxOffsetLocation != 0xFFFFFFFF);
+    skyboxSamplerLocation = glGetUniformLocation(skyboxShading.getName(), "textureSampler");
+    assert(skyboxSamplerLocation != 0xFFFFFFFF);
 
     //seed the random number generator
     srand(time(0));
 
-    Geometry geom1, geom2, geomSphere;
-    geom1.loadOBJ("models/FlappyBirdDerp.obj", true);
-//    geom1.makeRandomMeteor(15,15,12,0.05f);
-//    geom2.makeRandomMeteor(15,15,12,0.04f);
+    Geometry geom1, geom2, geomSphere, geomSkybox;
+    //geom1.loadOBJ("models/skybox.obj", true);
+    geom1.makeRandomMeteor(15,15,12,0.05f);
+    geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
+    geomSkybox.makeQuad();
 
     //Make a mesh
     sphere.makeMesh(geomSphere);
+    skybox.makeMesh(geomSkybox);
 
     meshes.push_back(Mesh(geom1));
-//    meshes.push_back(Mesh(geom2));
+    meshes.push_back(Mesh(geom2));
 
     //clear geometry memory, because it had been copied to the video card
     geom1.remove();
-//    geom2.remove();
+    geom2.remove();
     geomSphere.remove();
+    geomSkybox.remove();
 
-    meshes.front().transform(glm::translate( vec3(0.0f,0.0f,0.0f) ) );
-    meshes.front().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
+    meshes.front().transform(glm::translate( vec3(-5.0f,0.0f,0.0f) ) );
+    //meshes.front().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
 
-    //meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
+    //meshes.back().transform( glm::translate( vec3(5.0f,0.0f,0.0f) ) );
 
     //cout << glm::to_string(sphere.getOrientation() ) << endl;
 
     //Load a texture
-    texture.load("textures/camoFlap.png");
+    texture.load("textures/meteor.jpg");
 
     textures[0].load("textures/lazor0.jpg");
     textures[1].load("textures/lazor1.jpg");
     textures[2].load("textures/lazor2.jpg");
 
     //Load a texture
-    texture2.load("textures/white.png");
+    sphereTexture.load("textures/white.png");
+    skyboxTexture.load("textures/skybox.png");
 
     //Start the GLUT loop
     glutMainLoop();
