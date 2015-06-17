@@ -72,11 +72,14 @@
 		<Unit filename="Texture.hpp" />
 		<Unit filename="Vertex.cpp" />
 		<Unit filename="Vertex.hpp" />
+		<Unit filename="flat.frag" />
+		<Unit filename="flat.vert" />
 		<Unit filename="glmToCout.cpp" />
 		<Unit filename="glmToCout.hpp" />
 		<Unit filename="main.cpp" />
-		<Unit filename="minimal.frag" />
-		<Unit filename="minimal.vert" />
+		<Unit filename="phong.frag" />
+		<Unit filename="phong.vert" />
+		<Unit filename="skybox.vert" />
 		<Extensions>
 			<code_completion />
 			<envvars />
