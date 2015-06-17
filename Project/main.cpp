@@ -37,7 +37,7 @@ FlappyBird bird = FlappyBird();
 Texture texture = Texture(), texture2 = Texture();
 mat4 cameraMat = mat4();
 
-int lastTime = 0;
+int lastTime;
 int diffTime;
 
 Camera gCamera;
@@ -53,12 +53,14 @@ GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
 
+int temp=0;
+
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    gCamera.setPosition(glm::vec3(0.0f,0.0f,10.0f));
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,100.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -68,7 +70,7 @@ static void resize(int width, int height)
 void updateCamera(string direction)
 {
     //move position of camera based on WASD keys
-    const float moveSpeed = 0.1; //units per second
+    const float moveSpeed = 1.0; //units per second
 
     if(direction.compare("zoomin")==0){
         gCamera.offsetPosition(diffTime * moveSpeed * -gCamera.forward());
@@ -86,7 +88,7 @@ void updateCamera(string direction)
 }
 
 float getTimeFactorBetweenUpdates() {
-    cout << diffTime << endl;
+    //cout << diffTime << endl;
     float timeseconds = (float)diffTime/1000;
     float factor = 1.0f;
     return timeseconds*factor;
@@ -103,8 +105,13 @@ void updateBirdMovement() {
     // update flymovement
     bird.increaseFallVelocity(getTimeFactorBetweenUpdates());
     glm::vec3 update = bird.getMesh()->getMovement()*getTimeFactorBetweenUpdates();
+
     bird.getMesh()->transform(glm::translate(update));
 
+    if (temp < 100) {
+        cout << glm::to_string(update/getTimeFactorBetweenUpdates()) << endl;
+        temp++;
+    }
     // make camera move with bird
     gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
 }
@@ -331,8 +338,11 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    geom1.loadOBJ("models/Satellite1.obj", false);
-    //geom2.makeRandomMeteor(15,15,12,0.04f);
+    geom1.loadOBJ("models/FlappyBirdFinished.obj", true);
+    //geom1.loadOBJ("models/testUnit.obj", true);
+    //geom1.loadOBJ("models/Satellite1.obj", false);
+
+    geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
 
@@ -340,11 +350,13 @@ int main(int argc, char *argv[])
     sphere.makeMesh(geomSphere);
 
     meshes.push_back(Mesh(geom1));
+    meshes.push_back(Mesh(geom2));
     bird = FlappyBird(&meshes.front());
     bird.startFlying();
 
     //clear geometry memory, because it had been copied to the video card
     geom1.remove();
+    geom2.remove();
     geomSphere.remove();
 
     //Load a texture
@@ -352,6 +364,7 @@ int main(int argc, char *argv[])
     //Load a texture
     texture2.load("textures/white.png");
 
+    lastTime = glutGet(GLUT_ELAPSED_TIME);
     //Start the GLUT loop
     glutMainLoop();
 

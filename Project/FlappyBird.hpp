@@ -26,7 +26,7 @@ class FlappyBird
             energy = 1.0f;
             airResistance = 0.0f;
             flyVelocity = 10.0f;
-            maxVelocity = 1000.0f;
+            maxVelocity = 10000.0f;
             jumpspeed = 10.0f;
             fallVelocity = 0.0f;
             flappyMesh = mesh;
