@@ -53,12 +53,20 @@ GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
 
-int temp=0;
+Texture textures[2];
+double frame;
+Texture lazorTexture0 = Texture();
+Texture lazorTexture1 = Texture();
+Texture lazorTexture2 = Texture();
+bool isDescending;
+bool isShot;
+int x = 0;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
+
 
     gCamera.setPosition(glm::vec3(0.0f,0.0f,10.0f));
     gCamera.setViewportAspectRatio(ar);
@@ -108,10 +116,6 @@ void updateBirdMovement() {
 
     bird.getMesh()->transform(glm::translate(update));
 
-    if (temp < 100) {
-        cout << glm::to_string(update/getTimeFactorBetweenUpdates()) << endl;
-        temp++;
-    }
     // make camera move with bird
     gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
 }
@@ -152,7 +156,12 @@ static void display(void)
     glUniform1i(samplerLocation, 0/*GL_TEXTURE0*/);
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
-        glBindTexture(GL_TEXTURE_2D, texture.getName());
+//        glBindTexture(GL_TEXTURE_2D, texture.getName());
+
+        // Load texture at frame
+        glBindTexture( GL_TEXTURE_2D, textures[(int)frame].getName() );
+//        glBindTexture( GL_TEXTURE_2D, texture.getName() );
+
         //send the orientation matrix to the shader
 
         glm::mat4 sendOrientation = iter->getOrientation()*flightRotation;
@@ -171,6 +180,29 @@ static void display(void)
 
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
         }
+    }
+
+    // Laser animation
+    if(!isDescending) {
+        if(frame <= 3) {
+            frame += 0.01;
+        }else{
+            isDescending = true;
+        }
+    }
+
+    if (isDescending)
+    {
+        if(frame >= 0){
+            frame -= 0.01;
+        }else{
+            isDescending = false;
+        }
+    }
+
+    if (isShot)
+    {
+        meshes.back().transform( glm::translate( vec3(0.001f,0.0f,0.0f) ) );
     }
 
     //swap the renderbuffer with the screenbuffer
@@ -209,10 +241,23 @@ static void mouseMove(int x, int y)
 	}
 }
 
+
 static void keyUp(unsigned char key, int x, int y) {
     if (key == ' ') {
         jumped = false;
     }
+}
+
+static void shootLazor()
+{
+    Geometry lazor;
+    lazor.loadOBJ("models/lazor.obj", true);
+    cout << " poep " << endl;
+    meshes.push_back(Mesh(lazor));
+    meshes.back().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
+    isShot = true;
+
+    lazor.remove();
 }
 
 static void key(unsigned char key, int x, int y)
@@ -253,6 +298,9 @@ static void key(unsigned char key, int x, int y)
                 bird.increaseJumpVelocity();
             }
             jumped = true;
+            break;
+        case 'p':
+            shootLazor();
             break;
     }
 
@@ -344,6 +392,9 @@ int main(int argc, char *argv[])
 
     geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
+//    geom1.loadOBJ("models/FlappyBirdSmooth.obj", true);
+//    geom1.makeRandomMeteor(15,15,12,0.04f);
+//    geom2.makeRandomMeteor(15,15,12,0.04f);
     geomSphere.makeSphere(20, 20);
 
     //Make a mesh
@@ -360,7 +411,16 @@ int main(int argc, char *argv[])
     geomSphere.remove();
 
     //Load a texture
-    texture.load("textures/meteor.jpg");
+    texture.load("textures/camoFlap.png");
+
+    lazorTexture0.load("textures/lazor0.jpg");
+    lazorTexture1.load("textures/lazor1.jpg");
+    lazorTexture2.load("textures/lazor2.jpg");
+
+    textures[0] = lazorTexture0;
+    textures[1] = lazorTexture1;
+    textures[2] = lazorTexture2;
+
     //Load a texture
     texture2.load("textures/white.png");
 
