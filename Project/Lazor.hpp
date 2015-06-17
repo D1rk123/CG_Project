@@ -24,7 +24,7 @@ class Lazor: public GameObject
     }
 
     Lazor(glm::mat4 orientation, glm::vec3 direction, Mesh* mesh) : GameObject(mesh) {
-        this->orientation = orientation * glm::rotate(90.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+        this->orientation = orientation * glm::translate(glm::vec3(0.6f, 0.0f, 0.0f)) * glm::rotate(90.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         this->direction = direction;
         isDescending = true;
         speed = 3.0f;

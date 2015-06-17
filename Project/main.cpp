@@ -38,7 +38,7 @@ const char* flatFragmentShaderName = "flat.frag";
 
 ShaderProgram phongShading, skyboxShading, flatShading;
 
-list<Mesh> meteorMeshes;
+vector<Mesh> meteorMeshes;
 Mesh sphereMesh, lazorMesh, skyboxMesh, flappyMesh;
 
 FlappyBird bird;
@@ -63,8 +63,9 @@ GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocat
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
 
-vector<Lazor> lazors;
-vector<GameObject> meteors;
+list<Lazor> lazors;
+list<GameObject> meteors;
+vector<GameObject*> gameObjects;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -131,48 +132,72 @@ void displayFlappy() {
     flappyMesh.draw();
 }
 
-//void displayMeteors () {
-//    // Load texture at frame
-//    glBindTexture( GL_TEXTURE_2D, meteorTexture.getName() );
-//    for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
-//        //send the orientation matrix to the shader
-//        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
-//
-//        iter->draw();
-//    }
-//}
-//void displayEllipsoids () {
-//    if(drawEllips) {
-//        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-//
-//        glBindTexture(GL_TEXTURE_2D, sphereTexture.getName());
-//
-//        mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
-//        //send the orientation matrix to the shader
-//        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
-//        sphereMesh.draw();
-//
-//        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-//    }
-//}
+void displayMeteors () {
+    // Load texture at frame
+    glBindTexture( GL_TEXTURE_2D, meteorTexture.getName() );
+    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
+        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
+        iter->getMesh().draw();
+    }
+}
+void collectGameObjects () {
+    gameObjects.clear();
+    gameObjects.push_back(&bird);
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
+        gameObjects.push_back(&(*iter));
+    }
+    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
+        gameObjects.push_back(&(*iter));
+    }
+}
+void displayEllipsoids () {
+    if(drawEllips) {
+        collectGameObjects();
+        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-//void collectEllipsoids (list<const BoundingEllipsoid*>* ellipsoidList) {
-//    ellipsoidList->push_back(flappyMesh.getEllip());
-//    for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
-//        ellipsoidList->push_back(iter->getEllip());
-//    }
-//    /*for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
-//        ellipsoidList->push_back(iter->getEllip());
-//    }*/
-//}
+        glBindTexture(GL_TEXTURE_2D, sphereTexture.getName());
+        for(std::vector<GameObject*>::iterator iter = gameObjects.begin(); iter != gameObjects.end(); iter++) {
+            mat4 ellipOrientation = (*iter)->getOrientation() * (*iter)->getEllipsoid().orientation;
+            //send the orientation matrix to the shader
+            glUniformMatrix4fv(flatOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
+            sphereMesh.draw();
+        }
+        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    }
+}
+
+void testCollisions() {
+    /*collectGameObjects();
+    for(int i=0; i<((int)gameObjects.size())-1; i++) {
+        for(size_t j=i+1; j<gameObjects.size(); j++) {
+            gameObjects[i]->testCollision(gameObjects[j]);
+        }
+    }
+    if(bird.getCollided()) {
+        cout << "GAME OVER!" << endl;
+    }
+    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
+        if(iter->getCollided()) {
+            meteors.erase(iter);
+        }
+    }
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
+        if(iter->getCollided()) {
+            lazors.erase(iter);
+        }
+    }*/
+}
+
+void updateLazors() {
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
+        iter->update(getTimeFactorBetweenUpdates());
+    }
+}
 
 void displayLazors () {
-    glUseProgram(flatShading.getName());
-    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
-    for(size_t i=0; i<lazors.size(); i++) {
-        lazors[i].update(getTimeFactorBetweenUpdates());
-        glBindTexture( GL_TEXTURE_2D, lazorTextures[lazors[i].getTextureIndex()].getName());
-        glUniformMatrix4fv(flatOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(lazors[i].getOrientation()));
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
+        glBindTexture( GL_TEXTURE_2D, lazorTextures[iter->getTextureIndex()].getName());
+        glUniformMatrix4fv(flatOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
         lazorMesh.draw();
     }
 }
@@ -183,6 +208,11 @@ static void display(void)
     diffTime = glutGet(GLUT_ELAPSED_TIME) - lastTime;
     lastTime = glutGet(GLUT_ELAPSED_TIME);
 
+    bird.update(getTimeFactorBetweenUpdates());
+    updateLazors();
+
+    testCollisions();
+
     //Clear the render buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -190,7 +220,6 @@ static void display(void)
 
     // make camera move with bird
     gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
-    bird.update(getTimeFactorBetweenUpdates());
 
     displaySkyBox();
 
@@ -204,10 +233,13 @@ static void display(void)
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
     displayFlappy();
+    displayMeteors();
 
-    list<BoundingEllipsoid*> ellipsoidList;
 
-    //displayEllipsoids(ellipsoidList);
+    glUseProgram(flatShading.getName());
+    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
+
+    displayEllipsoids();
 
     displayLazors();
 
@@ -420,6 +452,23 @@ void setupTextures() {
     lazorTextures[2].load("textures/lazor2.png");
 }
 
+void makeMeteorMeshes(int amount) {
+    meteorMeshes.reserve(amount);
+    for(int i=0; i<amount; i++) {
+        Geometry geomMeteor;
+        geomMeteor.makeRandomMeteor(15, 15, 12, 0.05f);
+        meteorMeshes.push_back(Mesh(geomMeteor));
+        geomMeteor.remove();
+    }
+}
+
+void spawnMeteor(vec3 position) {
+    int index = rand()%meteorMeshes.size();
+
+    meteors.push_back(GameObject(&(meteorMeshes[index])));
+    meteors.back().transform(glm::translate(position));
+}
+
 void setupModels() {
     Geometry geomSphere, geomSkybox, geomFlappy, geomLazor;
 
@@ -427,13 +476,15 @@ void setupModels() {
     //geom1.makeRandomMeteor(15,15,12,0.05f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
-    geomFlappy.loadOBJ("models/FlappyDerpitor.obj", true);
+    geomFlappy.loadOBJ("models/testUnit.obj", true);
     geomLazor.loadOBJ("models/lazor.obj", true);
 
     sphereMesh.makeMesh(geomSphere);
     skyboxMesh.makeMesh(geomSkybox);
     flappyMesh.makeMesh(geomFlappy);
     lazorMesh.makeMesh(geomLazor);
+
+    lazorMesh.setEllipsoid(BoundingEllipsoid(glm::translate(vec3(0.5f, 0.0f, 0.0f))*glm::scale(vec3(1.054378f, 0.211248f, 0.211248f)), 1.054378f));
 
     bird.setMesh(&flappyMesh);
     bird.startFlying();
@@ -443,6 +494,21 @@ void setupModels() {
     geomSkybox.remove();
     geomFlappy.remove();
     geomLazor.remove();
+
+    makeMeteorMeshes(10);
+
+    spawnMeteor(vec3(14.0f, 4.0f, 0.0f));
+    spawnMeteor(vec3(14.0f, -4.0f, 0.0f));
+    spawnMeteor(vec3(24.0f, 4.0f, 0.0f));
+    spawnMeteor(vec3(24.0f, -4.0f, 0.0f));
+    spawnMeteor(vec3(34.0f, 4.0f, 0.0f));
+    spawnMeteor(vec3(34.0f, -4.0f, 0.0f));
+    spawnMeteor(vec3(44.0f, 4.0f, 0.0f));
+    spawnMeteor(vec3(44.0f, -4.0f, 0.0f));
+    spawnMeteor(vec3(54.0f, 4.0f, 0.0f));
+    spawnMeteor(vec3(54.0f, -4.0f, 0.0f));
+    spawnMeteor(vec3(64.0f, 4.0f, 0.0f));
+    spawnMeteor(vec3(64.0f, -4.0f, 0.0f));
 }
 
 //Program entry point

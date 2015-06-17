@@ -14,7 +14,7 @@ using glm::mat3;
 using std::cout;
 using std::endl;
 
-void Mesh::draw() {
+void Mesh::draw() const{
     //Select the mesh vertices
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     //select the vertex positions

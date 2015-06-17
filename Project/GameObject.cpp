@@ -15,12 +15,12 @@ using glm::mat3;
 using std::cout;
 using std::endl;
 
-bool GameObject::testCollision(const GameObject& other) {
+bool GameObject::testCollision(GameObject* other) {
     //Bounding Sphere test
     const BoundingEllipsoid& ellip = mesh->getEllipsoid();
-    const BoundingEllipsoid& otherEllip = other.mesh->getEllipsoid();
+    const BoundingEllipsoid& otherEllip = other->mesh->getEllipsoid();
 
-    vec4 otherPosition = other.orientation[3] + otherEllip.orientation[3];
+    vec4 otherPosition = other->orientation[3] + otherEllip.orientation[3];
     vec4 diff4 = orientation[3] + ellip.orientation[3] - otherPosition;
     vec3 diff = vec3(diff4[0], diff4[1], diff4[2]);
     float squaredDiff = glm::dot(diff, diff);
@@ -42,7 +42,7 @@ bool GameObject::testCollision(const GameObject& other) {
     //take the starting point in the direction of the other ellipsoid
     vec3 point = glm::normalize(vec3(otherPositionInMyspace[0], otherPositionInMyspace[1], otherPositionInMyspace[2]));
 
-    mat4 meToOther = glm::inverse(other.orientation * otherEllip.orientation) * myOrientation;
+    mat4 meToOther = glm::inverse(other->orientation * otherEllip.orientation) * myOrientation;
     mat3 meToOther3 = mat3(meToOther[0][0], meToOther[0][1], meToOther[0][2],
                            meToOther[1][0], meToOther[1][1], meToOther[1][2],
                            meToOther[2][0], meToOther[2][1], meToOther[2][2]);
@@ -68,6 +68,8 @@ bool GameObject::testCollision(const GameObject& other) {
 
         if (distance<1.001f) {
             //cout << i<< endl;
+            collided = true;
+            other->collided = true;
             return true;
         }
         if ((lastDistance - distance)<0.001f) {

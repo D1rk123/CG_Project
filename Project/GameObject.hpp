@@ -9,15 +9,18 @@ class GameObject {
     Mesh* mesh;
     glm::mat4 orientation;
     glm::vec3 movement;
+    bool collided;
 
     public:
     GameObject() {
+        collided = false;
     }
     GameObject(Mesh* mesh) {
         this->mesh = mesh;
+        collided = false;
     }
 
-    bool testCollision(const GameObject& other);
+    bool testCollision(GameObject* other);
 
     void transform(const glm::mat4& transformation) {
         orientation = transformation * orientation;
@@ -25,38 +28,26 @@ class GameObject {
     void setOrientation(const glm::mat4& newOrientation) {
         orientation = newOrientation;
     }
-    const glm::mat4& getOrientation() {
+    const glm::mat4& getOrientation() const{
         return orientation;
     }
-    const Mesh& getMesh() {
+    const BoundingEllipsoid& getEllipsoid() const {
+        return mesh->getEllipsoid();
+    }
+    const Mesh& getMesh() const {
+        return *mesh;
+    }
+    Mesh& getMesh(){
         return *mesh;
     }
     void setMesh(Mesh* mesh) {
         this->mesh = mesh;
     }
 
-    /*float getVelocity() {
-        return glm::length(movement);
+    bool getCollided() {
+        return collided;
     }
 
-    float getVelocityX() {
-        return movement[0];
-    }
-
-    float getVelocityY() {
-        return movement[1];
-    }
-
-    void setVelocityX(float xVel) {
-        glm::vec3 addvec = glm::vec3(xVel, glm::vec2(0.0f));
-        movement += addvec;
-    }
-
-    void setVelocityY(float yVel) {
-        glm::vec3 addvec = glm::vec3(0.0f, yVel, 0.0f);
-        movement += addvec;
-    }
-    */
     glm::vec3 getMovement() {
         return movement;
     }

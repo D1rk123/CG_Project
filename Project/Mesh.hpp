@@ -24,12 +24,15 @@ class Mesh {
     Mesh(const Geometry& geom){
         makeMesh(geom);
     }
+    void setEllipsoid(const BoundingEllipsoid& ellipsoid) {
+        this->ellipsoid = ellipsoid;
+    }
 
-    const BoundingEllipsoid& getEllipsoid() {
+    const BoundingEllipsoid& getEllipsoid() const{
         return ellipsoid;
     }
 
-    void draw();
+    void draw() const;
 
     void makeMesh(const Geometry& geom);
 
