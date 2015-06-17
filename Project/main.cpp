@@ -58,7 +58,7 @@ static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    gCamera.setPosition(glm::vec3(0,0,4));
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,24.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -125,7 +125,7 @@ static void display(void)
 //        glBindTexture(GL_TEXTURE_2D, texture.getName());
 
         // Load texture at frame
-        glBindTexture( GL_TEXTURE_2D, textures[(int)frame].getName() );
+        glBindTexture( GL_TEXTURE_2D, texture.getName() );
 
         //send the orientation matrix to the shader
         glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
@@ -313,8 +313,8 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    geom1.loadOBJ("models/lazor.obj", true);
-//    geom1.makeRandomMeteor(15,15,12,0.04f);
+    geom1.loadOBJ("models/FlappyBirdDerp.obj", true);
+//    geom1.makeRandomMeteor(15,15,12,0.05f);
 //    geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
 //    geom2.remove();
     geomSphere.remove();
 
-    meshes.front().transform( glm::translate( vec3(0.0f,0.0f,0.0f) ) );
+    meshes.front().transform(glm::translate( vec3(0.0f,0.0f,0.0f) ) );
     meshes.front().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
 
     //meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
@@ -338,13 +338,11 @@ int main(int argc, char *argv[])
     //cout << glm::to_string(sphere.getOrientation() ) << endl;
 
     //Load a texture
-    lazorTexture0.load("textures/lazor0.jpg");
-    lazorTexture1.load("textures/lazor1.jpg");
-    lazorTexture2.load("textures/lazor2.jpg");
+    texture.load("textures/camoFlap.png");
 
-    textures[0] = lazorTexture0;
-    textures[1] = lazorTexture1;
-    textures[2] = lazorTexture2;
+    textures[0].load("textures/lazor0.jpg");
+    textures[1].load("textures/lazor1.jpg");
+    textures[2].load("textures/lazor2.jpg");
 
     //Load a texture
     texture2.load("textures/white.png");

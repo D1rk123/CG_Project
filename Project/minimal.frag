@@ -8,6 +8,7 @@ out vec4 colorOut;
 
 
 uniform sampler2D textureSampler;
+uniform mat4 camera;
 
 void main(void)
 {
@@ -18,7 +19,7 @@ void main(void)
     float shininess = 10;
 
     vec3 lightDir = normalize(lightPos - vert);
-    vec3 eyeDir = normalize(vec3(0, 0, 20)-vert); // we are in Eye Coordinates, so EyePos is (0,0,0)
+    vec3 eyeDir = normalize(camera[3].xyz-vert); // we are in Eye Coordinates, so EyePos is (0,0,0)
     vec3 reflection = normalize(-reflect(lightDir,normal));
 
     float shininessFactor = 3f;
