@@ -60,7 +60,7 @@ static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    gCamera.setPosition(glm::vec3(0.0f,0.0f,100.0f));
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,10.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    geom1.loadOBJ("models/FlappyBirdFinished.obj", true);
+    geom1.loadOBJ("models/FlappyDerpitor.obj", true);
     //geom1.loadOBJ("models/testUnit.obj", true);
     //geom1.loadOBJ("models/Satellite1.obj", false);
 
