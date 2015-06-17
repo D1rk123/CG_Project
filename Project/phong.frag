@@ -22,7 +22,7 @@ void main(void)
     vec3 eyeDir = normalize(camera[3].xyz-vert); // we are in Eye Coordinates, so EyePos is (0,0,0)
     vec3 reflection = normalize(-reflect(lightDir,normal));
 
-    float shininessFactor = 3f;
+    float shininessFactor = 3.0f;
 
     //calculate diffuse term
     vec4 Idiff = diffuse * max(dot(normal,lightDir), 0.0);

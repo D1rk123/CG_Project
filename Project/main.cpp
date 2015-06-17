@@ -55,6 +55,10 @@ float deltaAngleY = 0.0f;
 int xOrigin = -1;
 int yOrigin = -1;
 bool jumped = false;
+float countdown;
+
+unsigned int maxAmountOfMeteors = 100;
+unsigned int currAmountOfMeteors = 0;
 
 GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation;
 GLuint skyboxOffsetLocation, skyboxSamplerLocation;
@@ -202,6 +206,40 @@ void displayLazors () {
     }
 }
 
+void spawnMeteor(vec3 position) {
+    int index = rand()%meteorMeshes.size();
+
+    meteors.push_back(GameObject(&(meteorMeshes[index])));
+    meteors.back().transform(glm::translate(position));
+}
+
+void spawnMeteorsRandomly() {
+    float updateTime = getTimeFactorBetweenUpdates();
+    countdown += updateTime;
+    float randSpawnTime;
+    int randNum = rand()%100;
+    randSpawnTime = 0.5 + (0.5*((currAmountOfMeteors + randNum) % 3));
+    //cout << randSpawnTime << endl;
+    if(countdown > randSpawnTime) {
+        int randomY = (rand()%19) - 9;
+        vec3 randomPos = vec3(bird.getOrientation()[3][0]+40.0f, randomY, 0.0f);
+        if(currAmountOfMeteors < maxAmountOfMeteors) {
+            spawnMeteor(randomPos);
+            currAmountOfMeteors++;
+            countdown = rand()%3;
+        }
+    }
+}
+
+void cleanupMeteors() {
+    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
+        if(iter->checkAwayFromFlappy(bird.getOrientation()[3][0])) {
+            iter = meteors.erase(iter);
+            currAmountOfMeteors--;
+            cout << "Erasing meteor" << endl;
+        }
+    }
+}
 
 static void display(void)
 {
@@ -235,6 +273,8 @@ static void display(void)
     displayFlappy();
     displayMeteors();
 
+    spawnMeteorsRandomly();
+    cleanupMeteors();
 
     glUseProgram(flatShading.getName());
     glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
@@ -462,13 +502,6 @@ void makeMeteorMeshes(int amount) {
     }
 }
 
-void spawnMeteor(vec3 position) {
-    int index = rand()%meteorMeshes.size();
-
-    meteors.push_back(GameObject(&(meteorMeshes[index])));
-    meteors.back().transform(glm::translate(position));
-}
-
 void setupModels() {
     Geometry geomSphere, geomSkybox, geomFlappy, geomLazor;
 
@@ -476,7 +509,7 @@ void setupModels() {
     //geom1.makeRandomMeteor(15,15,12,0.05f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
-    geomFlappy.loadOBJ("models/testUnit.obj", true);
+    geomFlappy.loadOBJ("models/flappyDerpitor.obj", true);
     geomLazor.loadOBJ("models/lazor.obj", true);
 
     sphereMesh.makeMesh(geomSphere);
@@ -496,19 +529,6 @@ void setupModels() {
     geomLazor.remove();
 
     makeMeteorMeshes(10);
-
-    spawnMeteor(vec3(14.0f, 4.0f, 0.0f));
-    spawnMeteor(vec3(14.0f, -4.0f, 0.0f));
-    spawnMeteor(vec3(24.0f, 4.0f, 0.0f));
-    spawnMeteor(vec3(24.0f, -4.0f, 0.0f));
-    spawnMeteor(vec3(34.0f, 4.0f, 0.0f));
-    spawnMeteor(vec3(34.0f, -4.0f, 0.0f));
-    spawnMeteor(vec3(44.0f, 4.0f, 0.0f));
-    spawnMeteor(vec3(44.0f, -4.0f, 0.0f));
-    spawnMeteor(vec3(54.0f, 4.0f, 0.0f));
-    spawnMeteor(vec3(54.0f, -4.0f, 0.0f));
-    spawnMeteor(vec3(64.0f, 4.0f, 0.0f));
-    spawnMeteor(vec3(64.0f, -4.0f, 0.0f));
 }
 
 //Program entry point

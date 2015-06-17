@@ -20,6 +20,31 @@ class GameObject {
         collided = false;
     }
 
+    //Only works for objects completely before the near clipping plane
+    //Which is all object in this games
+    bool checkOutsideOfView (const glm::mat4& camera) {
+        float radius = mesh->getEllipsoid().radius;
+        glm::vec4 centerPos = orientation[3];
+
+        glm::vec4 downLeftBound = camera * centerPos + glm::vec4(-radius, -radius, radius, 0.0f);
+        glm::vec4 upRightBound = camera * centerPos + glm::vec4(radius, radius, radius, 0.0f);
+
+        //cout << centerPos << endl << downLeftBound << endl << upRightBound << endl;
+        if(downLeftBound.x / downLeftBound.w > 1.0f || downLeftBound.y / downLeftBound.w > 1.0f)
+            return true;
+        if(upRightBound.x / upRightBound.w < -1.0f || upRightBound.y / upRightBound.w < -1.0f)
+            return true;
+        return false;
+    }
+
+    bool checkAwayFromFlappy (float flappyPosX) {
+        if(orientation[3][0] < flappyPosX - 40.0f) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     bool testCollision(GameObject* other);
 
     void transform(const glm::mat4& transformation) {
