@@ -52,13 +52,15 @@ Texture lazorTexture0 = Texture();
 Texture lazorTexture1 = Texture();
 Texture lazorTexture2 = Texture();
 bool isDescending;
+bool isShot;
+int x = 0;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    gCamera.setPosition(glm::vec3(0,0,4));
+    gCamera.setPosition(glm::vec3(0,0,10));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -104,17 +106,10 @@ static void display(void)
     //glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
     glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
 
-    if(!meshes.back().testCollision(meshes.front())) {
-        //move the model
-        meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
-        meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
-    }
-//    meshes.front().transform( glm::translate( vec3(-0.001f,0.0f,0.0f) ) );
-
 //    if(!meshes.back().testCollision(meshes.front())) {
 //        //move the model
-//        meshes.front().transform(glm::rotate(0.5f, vec3(0.0f, 1.0f, 0.0f)));
-////        meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
+//        meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
+//        meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
 //    }
 
     //send the texture selection to the shader
@@ -126,6 +121,7 @@ static void display(void)
 
         // Load texture at frame
         glBindTexture( GL_TEXTURE_2D, textures[(int)frame].getName() );
+//        glBindTexture( GL_TEXTURE_2D, texture.getName() );
 
         //send the orientation matrix to the shader
         glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
@@ -145,6 +141,7 @@ static void display(void)
         }
     }
 
+    // Laser animation
     if(!isDescending) {
         if(frame <= 3) {
             frame += 0.01;
@@ -152,7 +149,7 @@ static void display(void)
             isDescending = true;
         }
     }
-    //Check frame
+
     if (isDescending)
     {
         if(frame >= 0){
@@ -160,6 +157,11 @@ static void display(void)
         }else{
             isDescending = false;
         }
+    }
+
+    if (isShot)
+    {
+        meshes.back().transform( glm::translate( vec3(0.001f,0.0f,0.0f) ) );
     }
 
     //swap the renderbuffer with the screenbuffer
@@ -198,6 +200,18 @@ static void mouseMove(int x, int y)
 	}
 }
 
+static void shootLazor()
+{
+    Geometry lazor;
+    lazor.loadOBJ("models/lazor.obj", true);
+    cout << " poep " << endl;
+    meshes.push_back(Mesh(lazor));
+    meshes.back().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
+    isShot = true;
+
+    lazor.remove();
+}
+
 static void key(unsigned char key, int x, int y)
 {
     //empty if statement to remove unused argument warning
@@ -229,6 +243,9 @@ static void key(unsigned char key, int x, int y)
             break;
         case 'l':
             drawEllips = !drawEllips;
+            break;
+        case 'p':
+            shootLazor();
             break;
     }
 
@@ -313,31 +330,30 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    geom1.loadOBJ("models/lazor.obj", true);
+//    geom1.loadOBJ("models/FlappyBirdSmooth.obj", true);
 //    geom1.makeRandomMeteor(15,15,12,0.04f);
 //    geom2.makeRandomMeteor(15,15,12,0.04f);
-    //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
 
     //Make a mesh
     sphere.makeMesh(geomSphere);
 
-    meshes.push_back(Mesh(geom1));
+//    meshes.push_back(Mesh(geom1));
 //    meshes.push_back(Mesh(geom2));
 
     //clear geometry memory, because it had been copied to the video card
-    geom1.remove();
+//    geom1.remove();
 //    geom2.remove();
     geomSphere.remove();
 
-    meshes.front().transform( glm::translate( vec3(0.0f,0.0f,0.0f) ) );
-    meshes.front().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
-
-    //meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
+//    meshes.front().transform( glm::translate( vec3(0.0f,0.0f,0.0f) ) );
+//    meshes.front().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
 
     //cout << glm::to_string(sphere.getOrientation() ) << endl;
 
     //Load a texture
+    texture.load("textures/camoFlap.png");
+
     lazorTexture0.load("textures/lazor0.jpg");
     lazorTexture1.load("textures/lazor1.jpg");
     lazorTexture2.load("textures/lazor2.jpg");
