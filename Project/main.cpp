@@ -65,6 +65,7 @@ int maxNumLazors = 5;
 vector<Lazor> lazors;
 
 float countDown = 0.0f;
+const int maxNumMeteors = 10;
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -191,10 +192,16 @@ static void display(void)
     float updateTime = getTimeFactorBetweenUpdates();
     countDown += updateTime;
 //    cout << "times: " << countDown << endl;
-    if (countDown > 8.0f) {
+    if (countDown > 8.0f && meshes.size() < maxNumMeteors) {
        addMeteor();
+
+       glBindTexture( GL_TEXTURE_2D, meteorTexture.getName() );
+       glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(meshes.front().getOrientation()));
+
        countDown = 0.0f;
     }
+
+
 
 
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
