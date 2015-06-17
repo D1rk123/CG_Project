@@ -37,6 +37,10 @@ class FlappyBird
             flyVelocity = vel;
         }
 
+        float getFlyVelocity() {
+            return flyVelocity;
+        }
+
         void changeEnergy(float change) {
             if (energy+change < 1.0 && energy+change > 0.0) {
                 energy += change;
@@ -77,6 +81,7 @@ class FlappyBird
         void increaseJumpVelocity() {
             if (energy > 0) {
                 flappyMesh->increaseMovementY(jumpspeed*energy);
+                fallVelocity = 0;
             }
         }
 
