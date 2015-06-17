@@ -59,7 +59,6 @@
 		</Linker>
 		<Unit filename="BoundingEllipsoid.cpp" />
 		<Unit filename="BoundingEllipsoid.hpp" />
-		<Unit filename="Camera.cpp" />
 		<Unit filename="Camera.h" />
 		<Unit filename="FlappyBird.cpp" />
 		<Unit filename="FlappyBird.hpp" />
