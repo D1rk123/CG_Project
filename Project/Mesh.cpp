@@ -121,8 +121,9 @@ bool Mesh::testCollision(const Mesh& other) {
 
         float movTangent = projTangent / projToCenter;
         float movBiTangent = projBiTangent / projToCenter;
-        float movToCenter = 1-sqrt(1 - (movTangent*movTangent + movBiTangent*movBiTangent));
+        //float movToCenter = 1-sqrt(1 - (movTangent*movTangent + movBiTangent*movBiTangent));
 
-        point -= tangent * movTangent + biTangent * movBiTangent - movToCenter * toCenter;
+        point -= tangent * movTangent + biTangent * movBiTangent;// - movToCenter * toCenter;
+        point = glm::normalize(point);
     }
 }
