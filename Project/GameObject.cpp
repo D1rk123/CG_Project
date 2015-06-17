@@ -76,6 +76,10 @@ bool GameObject::testCollision(GameObject* other) {
             //cout << i<< endl;
             return false;
         }
+        if (lastDistance < distance) {
+            cout << "Diverging" << endl;
+            return false;
+        }
         lastDistance = distance;
 
         vec3 normal = transfPoint / distance;
