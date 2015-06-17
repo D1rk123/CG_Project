@@ -68,6 +68,10 @@ class GameObject {
         movement += plusMovement;
     }
 
+    void setVelocityY(float velY) {
+        movement[1] = velY;
+    }
+
 };
 
 #endif // HPP_GAMEOBJECT

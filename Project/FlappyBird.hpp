@@ -48,8 +48,16 @@ class FlappyBird : public GameObject
             }
         }
 
-        void update(float elapsedTime) {
+        bool touchingGround(float height) {
+            float radiusFlappy = mesh->getEllipsoid().radius;
+            return (orientation[3][1] < -height+radiusFlappy);
+        }
+
+        void update(float elapsedTime, float height) {
             // update flymovement
+            if (orientation[3][1] >= height) {
+                setVelocityY(-5.0f);
+            }
             increaseFallVelocity(elapsedTime);
             glm::vec3 position = glm::vec3(orientation[3][0], orientation[3][1], orientation[3][2]);
             glm::vec3 update = movement*elapsedTime;

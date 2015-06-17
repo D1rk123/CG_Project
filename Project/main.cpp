@@ -19,7 +19,7 @@
 #include "FlappyBird.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
-#include "Camera.h"
+#include "Camera.hpp"
 #include "BoundingEllipsoid.hpp"
 #include <vector>
 
@@ -49,11 +49,8 @@ Texture lazorTextures[3];
 int lastTime;
 int diffTime;
 
-Camera gCamera;
-float deltaAngleX = 0.0f;
-float deltaAngleY = 0.0f;
-int xOrigin = -1;
-int yOrigin = -1;
+Camera gCamera = Camera();
+
 bool jumped = false;
 
 GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation;
@@ -78,26 +75,6 @@ static void resize(int width, int height)
 }
 
 
-void updateCamera(string direction)
-{
-    //move position of camera based on WASD keys
-    const float moveSpeed = 1.0; //units per second
-
-    if(direction.compare("zoomin")==0){
-        gCamera.offsetPosition(diffTime * moveSpeed * -gCamera.forward());
-    } else if(direction.compare("zoomout")==0){
-        gCamera.offsetPosition(diffTime * moveSpeed * gCamera.forward());
-    } else if(direction.compare("left")==0){
-        gCamera.offsetPosition(diffTime * moveSpeed * -gCamera.right());
-    } else if(direction.compare("right")==0){
-        gCamera.offsetPosition(diffTime * moveSpeed * gCamera.right());
-    } else if(direction.compare("up")==0){
-        gCamera.offsetPosition(diffTime * moveSpeed * -glm::vec3(0,1,0));
-    } else if(direction.compare("down")==0){
-        gCamera.offsetPosition(diffTime * moveSpeed * glm::vec3(0,1,0));
-    }
-}
-
 float getTimeFactorBetweenUpdates() {
     //cout << diffTime << endl;
     float timeseconds = (float)diffTime/1000;
@@ -112,7 +89,7 @@ void displaySkyBox() {
 
     glBindTexture( GL_TEXTURE_2D, skyboxTexture.getName() );
 
-    float offset = gCamera.matrix()[3][0]/50.0f;
+    float offset = gCamera.getOrientation()[3][0]/50.0f;
 
     glUniform1f(skyboxOffsetLocation, offset);
     glUniform1i(skyboxSamplerLocation, 0/*GL_TEXTURE0*/);
@@ -140,6 +117,7 @@ void displayMeteors () {
         iter->getMesh().draw();
     }
 }
+
 void collectGameObjects () {
     gameObjects.clear();
     gameObjects.push_back(&bird);
@@ -177,6 +155,10 @@ void testCollisions() {
     if(bird.getCollided()) {
         cout << "GAME OVER!" << endl;
     }
+    if (bird.touchingGround(gCamera.getHeightOfView())) {
+        cout << "GAME OVER!" << endl;
+        //bird.setMovement(glm::vec3(0.0f));
+    }
     for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
         if(iter->getCollided()) {
             iter = meteors.erase(iter);
@@ -209,7 +191,7 @@ static void display(void)
     diffTime = glutGet(GLUT_ELAPSED_TIME) - lastTime;
     lastTime = glutGet(GLUT_ELAPSED_TIME);
 
-    bird.update(getTimeFactorBetweenUpdates());
+    bird.update(getTimeFactorBetweenUpdates(), gCamera.getHeightOfView());
     updateLazors();
 
     testCollisions();
@@ -220,7 +202,7 @@ static void display(void)
     glActiveTexture(GL_TEXTURE0);
 
     // make camera move with bird
-    gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
+    gCamera.offsetPosition(glm::vec3(1.0f, 0.0f, 0.0f)*bird.getFlyVelocity()*getTimeFactorBetweenUpdates());
 
     displaySkyBox();
 
@@ -228,7 +210,7 @@ static void display(void)
     glUseProgram(phongShading.getName());
 
     // send the camera matrix to the shader
-    glUniformMatrix4fv(phongCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
+    glUniformMatrix4fv(phongCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.getOrientation()));
 
     //send the texture selection to the shader
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
@@ -238,7 +220,7 @@ static void display(void)
 
 
     glUseProgram(flatShading.getName());
-    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
+    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.getOrientation()));
 
     displayEllipsoids();
 
@@ -247,41 +229,6 @@ static void display(void)
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
 }
-
-
-
-static void mouseClick(int button, int state, int x, int y)
-{
-	// only start motion if the left button is pressed
-	if (button == GLUT_LEFT_BUTTON) {
-
-		// when the button is released
-		if (state == GLUT_UP) {
-			xOrigin = -1;
-			yOrigin = -1;
-		}
-		else  {// state = GLUT_DOWN
-			xOrigin = x;
-			yOrigin = y;
-		}
-	}
-}
-
-static void mouseMove(int x, int y)
-{
-	// this will only be true when the left button is down
-	if (xOrigin >= 0) {
-
-		// update deltaAngle
-		deltaAngleX = (x - xOrigin) * 0.0025f;
-		deltaAngleY = (y - yOrigin) * 0.0025f;
-
-		// update camera's direction
-        gCamera.offsetOrientation(-deltaAngleY, -deltaAngleX);
-
-	}
-}
-
 
 static void keyUp(unsigned char key, int x, int y) {
     //empty if statement to remove unused argument warning
@@ -314,25 +261,7 @@ static void key(unsigned char key, int x, int y)
         case 'q':
             exit(0);
             break;
-        case 's':
-            updateCamera("zoomin");
-            break;
-        case 'w':
-            updateCamera("zoomout");
-            break;
-        case 'a':
-            updateCamera("left");
-            break;
-        case 'd':
-            updateCamera("right");
-            break;
-        case 'x':
-            updateCamera("down");
-            break;
-        case 'z':
-            updateCamera("up");
-            break;
-        case 'l':
+         case 'l':
             drawEllips = !drawEllips;
             break;
         case ' ':
@@ -395,8 +324,6 @@ bool setupOpenGL (int argc, char *argv[]) {
     glutDisplayFunc(display);
     glutKeyboardFunc(key);
     glutKeyboardUpFunc(keyUp);
-    glutMouseFunc(mouseClick);
-    glutMotionFunc(mouseMove);
     glutIdleFunc(idle);
 
     glClearColor(0,0,0,1);
@@ -477,7 +404,9 @@ void setupModels() {
     //geom1.makeRandomMeteor(15,15,12,0.05f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
-    geomFlappy.loadOBJ("models/FlappyDerpinator.obj", true);
+
+    //geomFlappy.loadOBJ("models/FlappyDerpinator.obj", true);
+    geomFlappy.loadOBJ("models/Satellite1.obj", false);
     geomLazor.loadOBJ("models/lazor.obj", true);
 
     sphereMesh.makeMesh(geomSphere);
@@ -520,7 +449,8 @@ int main(int argc, char *argv[])
     setupTextures();
     setupModels();
 
-    gCamera.setPosition(glm::vec3(0.0f,0.0f,24.0f));
+    gCamera = Camera(glm::vec3(0.0f,0.0f,24.0f));
+    //gCamera.setPosition(glm::vec3(0.0f,0.0f,24.0f));
 
     //seed the random number generator
     srand(time(0));
