@@ -15,6 +15,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <IL/il.h>
 #include "Mesh.hpp"
+#include "FlappyBird.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
 #include "Camera.h"
@@ -31,28 +32,33 @@ const char* fragmentShaderName = "minimal.frag";
 ShaderProgram shaderProgram = ShaderProgram();
 list<Mesh> meshes;
 Mesh sphere = Mesh();
+FlappyBird bird = FlappyBird();
+
 Texture texture = Texture(), texture2 = Texture();
 mat4 cameraMat = mat4();
 
-int lastTime = glutGet(GLUT_ELAPSED_TIME);
-int timediff = 0;
+int lastTime = 0;
+int diffTime;
+
 Camera gCamera;
 float deltaAngleX = 0.0f;
 float deltaAngleY = 0.0f;
 int xOrigin = -1;
 int yOrigin = -1;
 
+float energyRate = 0.01f;
+bool jumped = false;
+
 GLuint cameraMatrixLocation, orientationMatrixLocation, samplerLocation;
 BoundingEllipsoid bEllip;
 bool drawEllips = true;
-
 
 // GLUT callback Handlers
 static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    gCamera.setPosition(glm::vec3(0,0,4));
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,100.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -61,49 +67,76 @@ static void resize(int width, int height)
 
 void updateCamera(string direction)
 {
-    timediff = glutGet(GLUT_ELAPSED_TIME) - lastTime;
-
     //move position of camera based on WASD keys
     const float moveSpeed = 0.1; //units per second
 
     if(direction.compare("zoomin")==0){
-        gCamera.offsetPosition(timediff * moveSpeed * -gCamera.forward());
+        gCamera.offsetPosition(diffTime * moveSpeed * -gCamera.forward());
     } else if(direction.compare("zoomout")==0){
-        gCamera.offsetPosition(timediff * moveSpeed * gCamera.forward());
+        gCamera.offsetPosition(diffTime * moveSpeed * gCamera.forward());
     } else if(direction.compare("left")==0){
-        gCamera.offsetPosition(timediff * moveSpeed * -gCamera.right());
+        gCamera.offsetPosition(diffTime * moveSpeed * -gCamera.right());
     } else if(direction.compare("right")==0){
-        gCamera.offsetPosition(timediff * moveSpeed * gCamera.right());
+        gCamera.offsetPosition(diffTime * moveSpeed * gCamera.right());
     } else if(direction.compare("up")==0){
-        gCamera.offsetPosition(timediff * moveSpeed * -glm::vec3(0,1,0));
+        gCamera.offsetPosition(diffTime * moveSpeed * -glm::vec3(0,1,0));
     } else if(direction.compare("down")==0){
-        gCamera.offsetPosition(timediff * moveSpeed * glm::vec3(0,1,0));
+        gCamera.offsetPosition(diffTime * moveSpeed * glm::vec3(0,1,0));
     }
+}
+
+float getTimeFactorBetweenUpdates() {
+    cout << diffTime << endl;
+    float timeseconds = (float)diffTime/1000;
+    float factor = 1.0f;
+    return timeseconds*factor;
+}
+
+/*void jump(){
+    //bird.changeEnergy(-2*energyRate);
+    bird.increaseJumpVelocity();
+}*/
+
+void updateBirdMovement() {
+    bird.changeEnergy(energyRate);
+
+    glm::vec3 update = bird.getMesh()->getMovement()*getTimeFactorBetweenUpdates();
+    bird.increaseFallVelocity(getTimeFactorBetweenUpdates());
+
+    bird.getMesh()->transform(glm::translate(update));
 }
 
 
 static void display(void)
 {
+    diffTime = glutGet(GLUT_ELAPSED_TIME) - lastTime;
+    lastTime = glutGet(GLUT_ELAPSED_TIME);
+
     //Clear the render buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     //Select which shader program we use
     glUseProgram(shaderProgram.getName());
 
-
-    //rotate the model
-    lastTime = glutGet(GLUT_ELAPSED_TIME);
-    //cameraMat = glm::rotate(cameraMat, timediff*0.01f, vec3(0,1,0));
-
     // send the camera matrix to the shader
-    //glUniformMatrix4fv(matrixLocation, 1, GL_FALSE, glm::value_ptr(cameraMat));
     glUniformMatrix4fv(cameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.matrix()));
 
-    if(!meshes.back().testCollision(meshes.front())) {
+    // Update gravity for bird
+    updateBirdMovement();
+
+    // Find rotation matrix to make flappybird face in direction of movement
+    glm::vec3 dir = glm::normalize(bird.getMesh()->getMovement());
+    glm::vec3 z = glm::vec3(0.0f,0.0f,1.0f);
+    glm::vec3 cross = glm::cross(dir,z);
+    glm::mat4 flightRotation = glm::mat4(glm::vec4(dir, 0.0f), glm::vec4(z,0.0f), glm::vec4(cross, 0.0f), glm::vec4(0,0,0,1.0f));
+
+
+   //if(!meshes.back().testCollision(meshes.front())) {
         //move the model
-        meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
-        meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
-    }
+
+    //    meshes.front().transform(glm::translate(vec3(0.01f, 0.0f, 0.0f)));
+    //    meshes.back().transform(glm::rotate(0.01f, vec3(0.0f, 1.0f, 0.0f)));
+    //}
 
     //send the texture selection to the shader
     glActiveTexture(GL_TEXTURE0);
@@ -112,7 +145,9 @@ static void display(void)
     for(std::list<Mesh>::iterator iter = meshes.begin(); iter != meshes.end(); iter++) {
         glBindTexture(GL_TEXTURE_2D, texture.getName());
         //send the orientation matrix to the shader
-        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
+
+        glm::mat4 sendOrientation = iter->getOrientation()*flightRotation;
+        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(sendOrientation));
 
         iter->draw();
         if(drawEllips) {
@@ -120,7 +155,7 @@ static void display(void)
 
             glBindTexture(GL_TEXTURE_2D, texture2.getName());
 
-            mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation;
+            mat4 ellipOrientation = iter->getOrientation() * iter->getEllip().orientation * flightRotation;
             //send the orientation matrix to the shader
             glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(ellipOrientation));
             sphere.draw();
@@ -165,9 +200,16 @@ static void mouseMove(int x, int y)
 	}
 }
 
+static void keyUp(unsigned char key, int x, int y) {
+    if (key == ' ') {
+        jumped = false;
+    }
+}
+
 static void key(unsigned char key, int x, int y)
 {
     //empty if statement to remove unused argument warning
+
     if(x == y)
     {
     }
@@ -196,6 +238,12 @@ static void key(unsigned char key, int x, int y)
             break;
         case 'l':
             drawEllips = !drawEllips;
+            break;
+        case ' ':
+            if (jumped == false) {
+                bird.increaseJumpVelocity();
+            }
+            jumped = true;
             break;
     }
 
@@ -249,6 +297,7 @@ int main(int argc, char *argv[])
     glutReshapeFunc(resize);
     glutDisplayFunc(display);
     glutKeyboardFunc(key);
+    glutKeyboardUpFunc(keyUp);
     glutMouseFunc(mouseClick);
     glutMotionFunc(mouseMove);
     glutIdleFunc(idle);
@@ -280,9 +329,8 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    //geom1.loadOBJ("models/Satellite1.obj", false);
-    geom1.makeRandomMeteor(15,15,12,0.04f);
-    geom2.makeRandomMeteor(15,15,12,0.04f);
+    geom1.loadOBJ("models/FlappyBirdFinished.obj", true);
+    //geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
 
@@ -290,17 +338,12 @@ int main(int argc, char *argv[])
     sphere.makeMesh(geomSphere);
 
     meshes.push_back(Mesh(geom1));
-    meshes.push_back(Mesh(geom2));
+    bird = FlappyBird(&meshes.front());
+    bird.startFlying();
 
     //clear geometry memory, because it had been copied to the video card
     geom1.remove();
-    geom2.remove();
     geomSphere.remove();
-
-    meshes.front().transform( glm::translate( vec3(-10.0f,0.0f,0.0f) ) );
-    //meshes.back().transform( glm::translate( vec3(2.0f,0.0f,0.0f) ) );
-
-    //cout << glm::to_string(sphere.getOrientation() ) << endl;
 
     //Load a texture
     texture.load("textures/meteor.jpg");
