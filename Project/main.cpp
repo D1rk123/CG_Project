@@ -20,6 +20,7 @@
 #include "Texture.hpp"
 #include "Camera.h"
 #include "BoundingEllipsoid.hpp"
+#include <vector>
 
 using namespace std;
 using glm::vec4;
@@ -60,7 +61,8 @@ Texture lazorTexture1 = Texture();
 Texture lazorTexture2 = Texture();
 bool isDescending;
 bool isShot;
-int x = 0;
+int maxNumLasers = 5;
+vector<Mesh> lasers(maxNumLasers);
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -68,7 +70,7 @@ static void resize(int width, int height)
     const float ar = (float) width / (float) height;
 
 
-    gCamera.setPosition(glm::vec3(0.0f,0.0f,10.0f));
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,80.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -98,7 +100,7 @@ void updateCamera(string direction)
 float getTimeFactorBetweenUpdates() {
     //cout << diffTime << endl;
     float timeseconds = (float)diffTime/1000;
-    float factor = 1.0f;
+    float factor = 0.1f;
     return timeseconds*factor;
 }
 
@@ -120,6 +122,35 @@ void updateBirdMovement() {
     gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
 }
 
+static void updateLasers()
+{
+    // Laser animation
+    if(!isDescending) {
+        if(frame <= 3) {
+            frame += 0.01;
+        }else{
+            isDescending = true;
+        }
+    }
+
+    if (isDescending)
+    {
+        if(frame >= 0){
+            frame -= 0.01;
+        }else{
+            isDescending = false;
+        }
+    }
+
+    if (isShot)
+    {
+        for(int i=0; i<maxNumLasers; ++i){
+            glm::vec3 update = lasers[i].getMovement()*getTimeFactorBetweenUpdates();
+            lasers[i].transform(glm::translate(update));
+            cout << "update: " << glm::to_string(update) << endl;
+        }
+    }
+}
 
 static void display(void)
 {
@@ -137,6 +168,7 @@ static void display(void)
 
     // Update gravity for bird
     updateBirdMovement();
+    updateLasers();
 
     // Find rotation matrix to make flappybird face in direction of movement
     glm::vec3 dir = glm::normalize(bird.getMesh()->getMovement());
@@ -182,32 +214,11 @@ static void display(void)
         }
     }
 
-    // Laser animation
-    if(!isDescending) {
-        if(frame <= 3) {
-            frame += 0.01;
-        }else{
-            isDescending = true;
-        }
-    }
-
-    if (isDescending)
-    {
-        if(frame >= 0){
-            frame -= 0.01;
-        }else{
-            isDescending = false;
-        }
-    }
-
-    if (isShot)
-    {
-        meshes.back().transform( glm::translate( vec3(0.001f,0.0f,0.0f) ) );
-    }
-
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
 }
+
+
 
 static void mouseClick(int button, int state, int x, int y)
 {
@@ -252,11 +263,22 @@ static void shootLazor()
 {
     Geometry lazor;
     lazor.loadOBJ("models/lazor.obj", true);
-    cout << " poep " << endl;
-    meshes.push_back(Mesh(lazor));
-    meshes.back().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
-    isShot = true;
+    Mesh laser = Mesh(lazor);
+//    meshes.back().transform(glm::rotate(1.0f, vec3(0.0f, 1.0f, 0.0f)));
 
+    mat4 orientation = bird.getMesh()->getOrientation();
+    vec3 direction = bird.getMesh()->getMovement();
+
+    cout << "orientation: " << glm::to_string(orientation) << endl;
+    cout << "direction: " << glm::to_string(direction) << endl;
+
+    laser.setOrientation(orientation);
+    laser.setMovement(direction);
+
+    meshes.push_back(laser);
+    lasers.push_back(laser);
+
+    isShot = true;
     lazor.remove();
 }
 
@@ -386,9 +408,9 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    geom1.loadOBJ("models/FlappyDerpitor.obj", true);
+//    geom1.loadOBJ("models/FlappyDerpitor.obj", true);
     //geom1.loadOBJ("models/testUnit.obj", true);
-    //geom1.loadOBJ("models/Satellite1.obj", false);
+    geom1.loadOBJ("models/Satellite1.obj", false);
 
     geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
