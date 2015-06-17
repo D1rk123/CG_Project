@@ -58,7 +58,7 @@ static void resize(int width, int height)
 {
     const float ar = (float) width / (float) height;
 
-    gCamera.setPosition(glm::vec3(0.0f,0.0f,100.0f));
+    gCamera.setPosition(glm::vec3(0.0f,0.0f,10.0f));
     gCamera.setViewportAspectRatio(ar);
 
     glViewport(0, 0, width, height);
@@ -100,10 +100,13 @@ float getTimeFactorBetweenUpdates() {
 void updateBirdMovement() {
     bird.changeEnergy(energyRate);
 
-    glm::vec3 update = bird.getMesh()->getMovement()*getTimeFactorBetweenUpdates();
+    // update flymovement
     bird.increaseFallVelocity(getTimeFactorBetweenUpdates());
-
+    glm::vec3 update = bird.getMesh()->getMovement()*getTimeFactorBetweenUpdates();
     bird.getMesh()->transform(glm::translate(update));
+
+    // make camera move with bird
+    gCamera.offsetPosition(bird.getFlyVelocity()*getTimeFactorBetweenUpdates() * gCamera.right());
 }
 
 
@@ -129,7 +132,6 @@ static void display(void)
     glm::vec3 z = glm::vec3(0.0f,0.0f,1.0f);
     glm::vec3 cross = glm::cross(dir,z);
     glm::mat4 flightRotation = glm::mat4(glm::vec4(dir, 0.0f), glm::vec4(z,0.0f), glm::vec4(cross, 0.0f), glm::vec4(0,0,0,1.0f));
-
 
    //if(!meshes.back().testCollision(meshes.front())) {
         //move the model
@@ -329,7 +331,7 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     Geometry geom1, geom2, geomSphere;
-    geom1.loadOBJ("models/FlappyBirdFinished.obj", true);
+    geom1.loadOBJ("models/Satellite1.obj", false);
     //geom2.makeRandomMeteor(15,15,12,0.04f);
     //geom1.makeRandomMeteor(3, 3, 0, 0.08f);
     geomSphere.makeSphere(20, 20);
