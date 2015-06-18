@@ -57,7 +57,7 @@ float countdown;
 unsigned int maxAmountOfMeteors = 100;
 unsigned int currAmountOfMeteors = 0;
 
-GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation;
+GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation, phongLazorPositionsLocation;
 GLuint skyboxOffsetLocation, skyboxSamplerLocation;
 GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocation;
 
@@ -149,6 +149,14 @@ void displayEllipsoids () {
     }
 }
 
+void cleanupLazors() {
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
+        if(iter->checkOutsideOfView(gCamera.getOrientation(), 5.0f)) {
+            iter = lazors.erase(iter);
+        }
+    }
+}
+
 void testCollisions() {
     collectGameObjects();
     for(int i=0; i<((int)gameObjects.size())-1; i++) {
@@ -224,6 +232,22 @@ void cleanupMeteors() {
         }
     }
 }
+void fillLazorPositionsArray(float * posArray, int amount) {
+    int i=0;
+    cout << lazors.size() << endl;
+    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end() && i<amount; iter++) {
+        posArray[i*3] = iter->getOrientation()[3][0];
+        posArray[i*3+1] = iter->getOrientation()[3][1];
+        posArray[i*3+2] = iter->getOrientation()[3][2];
+        i++;
+    }
+    while(i<amount) {
+        posArray[i*3] = -100000.0f;
+        posArray[i*3+1] = -100000.0f;
+        posArray[i*3+2] = -100000.0f;
+        i++;
+    }
+}
 
 static void display(void)
 {
@@ -232,6 +256,7 @@ static void display(void)
 
     bird.update(getTimeFactorBetweenUpdates(), gCamera.getHeightOfView());
     updateLazors();
+    cleanupLazors();
 
     testCollisions();
 
@@ -253,6 +278,13 @@ static void display(void)
 
     //send the texture selection to the shader
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
+
+    float lazorPositions[30];
+    for(int i=0; i<10; i++) {
+        cout << lazorPositions[i*3] << "|" << lazorPositions[i*3+1] << "|" << lazorPositions[i*3] << endl;
+    }
+    fillLazorPositionsArray(lazorPositions, 10);
+    glUniform3fv(phongLazorPositionsLocation, 10, lazorPositions);
 
     displayFlappy();
     displayMeteors();
@@ -287,7 +319,7 @@ static void shootLazor()
     mat4 orientation = bird.getOrientation();
     vec3 direction = bird.getMovement();
 
-    lazors.push_back(Lazor(orientation, direction, &lazorMesh));
+    lazors.push_front(Lazor(orientation, direction, &lazorMesh));
 }
 
 static void key(unsigned char key, int x, int y)
@@ -394,6 +426,8 @@ void setupShaders() {
     assert(phongSamplerLocation != 0xFFFFFFFF);
     phongOrientationMatrixLocation = glGetUniformLocation(phongShading.getName(), "orientation");
     assert(phongOrientationMatrixLocation != 0xFFFFFFFF);
+    phongLazorPositionsLocation = glGetUniformLocation(phongShading.getName(), "lazorPos");
+    assert(phongLazorPositionsLocation != 0xFFFFFFFF);
 
     skyboxShading.setupShaders(skyboxVertexShaderName, skyboxFragmentShaderName);
     skyboxOffsetLocation = glGetUniformLocation(skyboxShading.getName(), "offset");

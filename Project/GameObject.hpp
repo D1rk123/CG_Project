@@ -3,6 +3,10 @@
 #include <glm/glm.hpp>
 #include "Mesh.hpp"
 #include "BoundingEllipsoid.hpp"
+#include "glmToCout.hpp"
+
+using std::cout;
+using std::endl;
 
 class GameObject {
     protected:
@@ -18,6 +22,22 @@ class GameObject {
     GameObject(Mesh* mesh) {
         this->mesh = mesh;
         collided = false;
+    }
+    //Only works for objects completely before the near clipping plane
+    //Which is all object in this games
+    bool checkOutsideOfView (const glm::mat4& camera, float margin) {
+        float stopValue = 1.0f + margin;
+        float radius = mesh->getEllipsoid().radius;
+        glm::vec4 centerPos = orientation[3];
+
+        glm::vec4 downLeftBound = camera * centerPos + glm::vec4(-radius, -radius, radius, 0.0f);
+        glm::vec4 upRightBound = camera * centerPos + glm::vec4(radius, radius, radius, 0.0f);
+
+        if(downLeftBound.x / downLeftBound.w > stopValue || downLeftBound.y / downLeftBound.w > stopValue)
+            return true;
+        if(upRightBound.x / upRightBound.w < -stopValue || upRightBound.y / upRightBound.w < -stopValue)
+            return true;
+        return false;
     }
 
     //Only works for objects completely before the near clipping plane
