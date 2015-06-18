@@ -169,7 +169,7 @@ void displayEllipsoids () {
 
 void cleanupLazors() {
     for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
-        if(iter->checkOutsideOfView(gCamera.matrix())) {
+        if(iter->checkOutsideOfView(gCamera.matrix(), 5.0f)) {
             iter = lazors.erase(iter);
         }
     }
@@ -213,7 +213,7 @@ void displayLazors () {
 
 void fillLazorPositionsArray(float * posArray, int amount) {
     int i=0;
-
+    cout << lazors.size() << endl;
     for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end() && i<amount; iter++) {
         posArray[i*3] = iter->getOrientation()[3][0];
         posArray[i*3+1] = iter->getOrientation()[3][1];
@@ -260,7 +260,9 @@ static void display(void)
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
     float lazorPositions[30];
-            cout << lazorPositions[0] << "| " << lazorPositions[1] << "| " << lazorPositions[2] << endl;
+    for(int i=0; i<10; i++) {
+        cout << lazorPositions[i*3] << "|" << lazorPositions[i*3+1] << "|" << lazorPositions[i*3] << endl;
+    }
     fillLazorPositionsArray(lazorPositions, 10);
     glUniform3fv(phongLazorPositionsLocation, 10, lazorPositions);
 
@@ -330,7 +332,7 @@ static void shootLazor()
     mat4 orientation = bird.getOrientation();
     vec3 direction = bird.getMovement();
 
-    lazors.push_back(Lazor(orientation, direction, &lazorMesh));
+    lazors.push_front(Lazor(orientation, direction, &lazorMesh));
 }
 
 static void key(unsigned char key, int x, int y)
