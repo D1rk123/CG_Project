@@ -234,7 +234,6 @@ void cleanupMeteors() {
 }
 void fillLazorPositionsArray(float * posArray, int amount) {
     int i=0;
-    cout << lazors.size() << endl;
     for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end() && i<amount; iter++) {
         posArray[i*3] = iter->getOrientation()[3][0];
         posArray[i*3+1] = iter->getOrientation()[3][1];
@@ -280,9 +279,6 @@ static void display(void)
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
     float lazorPositions[30];
-    for(int i=0; i<10; i++) {
-        cout << lazorPositions[i*3] << "|" << lazorPositions[i*3+1] << "|" << lazorPositions[i*3] << endl;
-    }
     fillLazorPositionsArray(lazorPositions, 10);
     glUniform3fv(phongLazorPositionsLocation, 10, lazorPositions);
 
