@@ -29,12 +29,12 @@ using glm::vec3;
 using glm::mat4;
 using std::list;
 
-const char* skyboxVertexShaderName = "skybox.vert";
-const char* skyboxFragmentShaderName = "flat.frag";
-const char* phongVertexShaderName = "phong.vert";
-const char* phongFragmentShaderName = "phong.frag";
-const char* flatVertexShaderName = "flat.vert";
-const char* flatFragmentShaderName = "flat.frag";
+const char* skyboxVertexShaderName = "shaders\\skybox.vert";
+const char* skyboxFragmentShaderName = "shaders\\flat.frag";
+const char* phongVertexShaderName = "shaders\\phong.vert";
+const char* phongFragmentShaderName = "shaders\\phong.frag";
+const char* flatVertexShaderName = "shaders\\flat.vert";
+const char* flatFragmentShaderName = "shaders\\flat.frag";
 
 ShaderProgram phongShading, skyboxShading, flatShading;
 
@@ -415,7 +415,9 @@ bool setupOpenGL (int argc, char *argv[]) {
 }
 
 void setupShaders() {
-    phongShading.setupShaders(phongVertexShaderName, phongFragmentShaderName);
+
+    bool result = phongShading.setupShaders(phongVertexShaderName, phongFragmentShaderName);
+    assert(result);
     phongCameraMatrixLocation = glGetUniformLocation(phongShading.getName(), "camera");
     assert(phongCameraMatrixLocation != 0xFFFFFFFF);
     phongSamplerLocation = glGetUniformLocation(phongShading.getName(), "textureSampler");

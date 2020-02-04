@@ -13,7 +13,7 @@ using std::endl;
 class ShaderProgram {
     GLuint name, vertexShader, fragmentShader;
 
-    const char * loadFile(const char* filename)
+    const std::string loadFile(const char* filename)
     {
         std::ifstream file(filename);
         if(!file.is_open())
@@ -23,14 +23,16 @@ class ShaderProgram {
         }
         std::stringstream buffer;
         buffer << file.rdbuf();
-        return buffer.str().c_str();
+        return buffer.str();
     }
 
     bool addShader(GLuint* shader, GLenum type, const char* filename, GLuint program)
     {
         *shader = glCreateShader(type);
 
-        const GLchar* shaderData = loadFile(filename);
+        const std::string shaderString = loadFile(filename);
+        const GLchar* shaderData = shaderString.c_str();
+        cout << "shaderData: " << shaderData << endl;
         if (shaderData == NULL)
             return false;
         glShaderSource(*shader, 1, &shaderData, NULL);
