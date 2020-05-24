@@ -12,7 +12,7 @@ class GameObject {
     protected:
     Mesh* mesh;
     glm::mat4 orientation;
-    glm::vec3 movement;
+    glm::vec3 velocity;
     bool collided;
 
     public:
@@ -97,28 +97,28 @@ class GameObject {
         this->collided = collided;
     }
 
-    glm::vec3 getMovement() {
-        return movement;
+    glm::vec3 getVelocity() {
+        return velocity;
     }
 
-    void setMovement(glm::vec3 newMove) {
-        movement = newMove;
+    void setVelocity(glm::vec3 newV) {
+        velocity = newV;
     }
 
-    void increaseMovementX(float plusMovementX) {
-        movement += glm::vec3(plusMovementX, 0.0f, 0.0f);
+    void increaseVelocityX(float plusVX) {
+        velocity += glm::vec3(plusVX, 0.0f, 0.0f);
     }
 
-    void increaseMovementY(float plusMovementY) {
-        movement += glm::vec3(0.0f, plusMovementY, 0.0f);
+    void increaseVelocityY(float plusVY) {
+        velocity += glm::vec3(0.0f, plusVY, 0.0f);
     }
 
-    void increaseMovement(glm::vec3 plusMovement) {
-        movement += plusMovement;
+    void increaseVelocity(glm::vec3 plusV) {
+        velocity += plusV;
     }
 
     void setVelocityY(float velY) {
-        movement[1] = velY;
+        velocity[1] = velY;
     }
 
 };

@@ -313,7 +313,7 @@ static void keyUp(unsigned char key, int x, int y) {
 static void shootLazor()
 {
     mat4 orientation = bird.getOrientation();
-    vec3 direction = bird.getMovement();
+    vec3 direction = bird.getVelocity();
 
     lazors.push_front(Lazor(orientation, direction, &lazorMesh));
 }
@@ -334,8 +334,8 @@ static void key(unsigned char key, int x, int y)
             drawEllips = !drawEllips;
             break;
         case ' ':
-            if (jumped == false) {
-                bird.increaseJumpVelocity();
+            if (jumped == false && bird.getOrientation()[3][1] < gCamera.getHeightOfView()*0.85) {
+                bird.jump();
             }
             jumped = true;
             break;
