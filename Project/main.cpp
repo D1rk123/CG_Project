@@ -55,7 +55,6 @@ bool jumped = false;
 float countdown;
 
 unsigned int maxAmountOfMeteors = 100;
-unsigned int currAmountOfMeteors = 0;
 
 GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation, phongLazorPositionsLocation;
 GLuint skyboxOffsetLocation, skyboxSamplerLocation;
@@ -67,6 +66,17 @@ bool drawEllips = false;
 list<Lazor> lazors;
 list<GameObject> meteors;
 vector<GameObject*> gameObjects;
+
+enum class GameState {
+    intro,
+    playing,
+    gameOver
+};
+GameState currState = GameState::intro;
+
+void changeStateToIntro();
+void changeStateToPlaying();
+void changeStateToGameOver();
 
 // GLUT callback Handlers
 static void resize(int width, int height)
@@ -165,11 +175,11 @@ void testCollisions() {
         }
     }
     if(bird.getCollided()) {
-        cout << "GAME OVER!" << endl;
+        changeStateToGameOver();
         bird.setCollided(false);
     }
     if (bird.touchingGround(gCamera.getHeightOfView())) {
-        cout << "GAME OVER!" << endl;
+        changeStateToGameOver();
         bird.setCollided(false);
         //bird.setMovement(glm::vec3(0.0f));
     }
@@ -211,14 +221,13 @@ void spawnMeteorsRandomly() {
     countdown += updateTime;
     float randSpawnTime;
     int randNum = rand()%100;
-    randSpawnTime = 0.5 + (0.5*((currAmountOfMeteors + randNum) % 3));
+    randSpawnTime = 0.5 + (0.5*((meteors.size() + randNum) % 3));
     //cout << randSpawnTime << endl;
     if(countdown > randSpawnTime) {
         int randomY = (rand()%19) - 9;
         vec3 randomPos = vec3(bird.getOrientation()[3][0]+40.0f, randomY, 0.0f);
-        if(currAmountOfMeteors < maxAmountOfMeteors) {
+        if(meteors.size() < maxAmountOfMeteors) {
             spawnMeteor(randomPos);
-            currAmountOfMeteors++;
             countdown = rand()%3;
         }
     }
@@ -228,10 +237,13 @@ void cleanupMeteors() {
     for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
         if(iter->checkAwayFromFlappy(bird.getOrientation()[3][0])) {
             iter = meteors.erase(iter);
-            currAmountOfMeteors--;
         }
     }
 }
+void clearMeteors(){
+    meteors.clear();
+}
+
 void fillLazorPositionsArray(float * posArray, int amount) {
     int i=0;
     for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end() && i<amount; iter++) {
@@ -254,6 +266,13 @@ static void display(void)
     lastTime = glutGet(GLUT_ELAPSED_TIME);
 
     bird.update(getTimeFactorBetweenUpdates(), gCamera.getHeightOfView());
+    if(currState == GameState::intro)
+    {
+        if (bird.getOrientation()[3][1] < -1 && bird.getVelocity()[1] < 0) {
+                bird.jump();
+        }
+    }
+
     updateLazors();
     cleanupLazors();
 
@@ -285,8 +304,11 @@ static void display(void)
     displayFlappy();
     displayMeteors();
 
-    spawnMeteorsRandomly();
-    cleanupMeteors();
+    if(currState != GameState::intro)
+    {
+        spawnMeteorsRandomly();
+        cleanupMeteors();
+    }
 
     glUseProgram(flatShading.getName());
     glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.getOrientation()));
@@ -334,13 +356,26 @@ static void key(unsigned char key, int x, int y)
             drawEllips = !drawEllips;
             break;
         case ' ':
-            if (jumped == false && bird.getOrientation()[3][1] < gCamera.getHeightOfView()*0.85) {
-                bird.jump();
+            if(currState == GameState::intro)
+            {
+                changeStateToPlaying();
             }
-            jumped = true;
+            if (currState == GameState::playing && jumped == false && bird.getOrientation()[3][1] < gCamera.getHeightOfView()*0.85) {
+                bird.jump();
+                jumped = true;
+            }
             break;
         case 'p':
-            shootLazor();
+            if (currState != GameState::gameOver)
+            {
+                shootLazor();
+            }
+            break;
+        case 'r':
+            if (currState == GameState::gameOver)
+            {
+                changeStateToIntro();
+            }
             break;
     }
 
@@ -492,6 +527,25 @@ void setupModels() {
     geomLazor.remove();
 
     makeMeteorMeshes(10);
+}
+
+void changeStateToIntro()
+{
+    cout << "Going back to intro!" << endl;
+    currState = GameState::intro;
+    clearMeteors();
+    bird.startFlying();
+}
+void changeStateToPlaying()
+{
+    cout << "Starting game!" << endl;
+    currState = GameState::playing;
+}
+void changeStateToGameOver()
+{
+    cout << "Game over!" << endl;
+    cout << "Press r to get back to intro!" << endl;
+    currState = GameState::gameOver;
 }
 
 //Program entry point

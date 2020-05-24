@@ -34,6 +34,7 @@ class FlappyBird : public GameObject
 
         void startFlying() {
             setVelocity(glm::vec3(flyVelocity,0.0f,0.0f));
+            orientation[3][1] = 2;
         }
 
         void jump() {
