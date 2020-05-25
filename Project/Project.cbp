@@ -67,9 +67,11 @@
 		<Unit filename="GameObject.hpp" />
 		<Unit filename="Geometry.cpp" />
 		<Unit filename="Geometry.hpp" />
+		<Unit filename="LaserManager.hpp" />
 		<Unit filename="Lazor.hpp" />
 		<Unit filename="Mesh.cpp" />
 		<Unit filename="Mesh.hpp" />
+		<Unit filename="MeteorManager.hpp" />
 		<Unit filename="ShaderProgram.hpp" />
 		<Unit filename="Texture.hpp" />
 		<Unit filename="Vertex.cpp" />

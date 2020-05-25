@@ -32,7 +32,6 @@ class ShaderProgram {
 
         const std::string shaderString = loadFile(filename);
         const GLchar* shaderData = shaderString.c_str();
-        cout << "shaderData: " << shaderData << endl;
         if (shaderData == NULL)
             return false;
         glShaderSource(*shader, 1, &shaderData, NULL);

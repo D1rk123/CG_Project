@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <ctime>
 #include <list>
+#include <vector>
+
 #include <GL/glew.h>
 #ifdef __APPLE__
 #include <GLUT/glut.h>
@@ -14,6 +16,7 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <IL/il.h>
+
 #include "Mesh.hpp"
 #include "Lazor.hpp"
 #include "FlappyBird.hpp"
@@ -21,7 +24,9 @@
 #include "Texture.hpp"
 #include "Camera.hpp"
 #include "BoundingEllipsoid.hpp"
-#include <vector>
+#include "LaserManager.hpp"
+#include "MeteorManager.hpp"
+
 
 using namespace std;
 using glm::vec4;
@@ -36,36 +41,27 @@ const char* phongFragmentShaderName = "shaders\\phong.frag";
 const char* flatVertexShaderName = "shaders\\flat.vert";
 const char* flatFragmentShaderName = "shaders\\flat.frag";
 
-ShaderProgram phongShading, skyboxShading, flatShading;
-
-vector<Mesh> meteorMeshes;
-Mesh sphereMesh, lazorMesh, skyboxMesh, flappyMesh;
-
-FlappyBird bird;
-
-Texture meteorTexture, sphereTexture, skyboxTexture, flappyTexture;
-Texture lazorTextures[3];
-
-int lastTime;
-int diffTime;
-
-Camera gCamera = Camera();
-
-bool jumped = false;
-float countdown;
-
-unsigned int maxAmountOfMeteors = 100;
-
 GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation, phongLazorPositionsLocation;
 GLuint skyboxOffsetLocation, skyboxSamplerLocation;
 GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocation;
 
-BoundingEllipsoid bEllip;
-bool drawEllips = false;
+ShaderProgram phongShading, skyboxShading, flatShading;
 
-list<Lazor> lazors;
-list<GameObject> meteors;
+Mesh sphereMesh, skyboxMesh, flappyMesh;
+Texture sphereTexture, skyboxTexture, flappyTexture;
+
+LaserManager laserManager;
+MeteorManager meteorManager(100);
+FlappyBird bird;
 vector<GameObject*> gameObjects;
+
+Camera camera = Camera();
+
+int lastTime, diffTime;
+
+bool jumped = false;
+
+bool drawBoundingEllipsoids = false;
 
 enum class GameState {
     intro,
@@ -74,18 +70,23 @@ enum class GameState {
 };
 GameState currState = GameState::intro;
 
-void changeStateToIntro();
-void changeStateToPlaying();
-void changeStateToGameOver();
-
-// GLUT callback Handlers
-static void resize(int width, int height)
+void changeStateToIntro()
 {
-    const float ar = (float) width / (float) height;
-
-    gCamera.setViewportAspectRatio(ar);
-
-    glViewport(0, 0, width, height);
+    cout << "Going back to intro!" << endl;
+    currState = GameState::intro;
+    meteorManager.clearMeteors();
+    bird.startFlying();
+}
+void changeStateToPlaying()
+{
+    cout << "Starting game!" << endl;
+    currState = GameState::playing;
+}
+void changeStateToGameOver()
+{
+    cout << "Game over!" << endl;
+    cout << "Press r to get back to intro!" << endl;
+    currState = GameState::gameOver;
 }
 
 
@@ -96,14 +97,55 @@ float getTimeFactorBetweenUpdates() {
     return timeseconds*factor;
 }
 
-void displaySkyBox() {
+void collectGameObjects () {
+    gameObjects.clear();
+    gameObjects.push_back(&bird);
+    laserManager.appendLasers(&gameObjects);
+    meteorManager.appendMeteors(&gameObjects);
+}
+
+void updateObjects() {
+    bird.update(getTimeFactorBetweenUpdates(), camera.getHeightOfView());
+    if(currState == GameState::intro)
+    {
+        if (bird.getOrientation()[3][1] < -1 && bird.getVelocity()[1] < 0) {
+                bird.jump();
+        }
+    }
+
+    laserManager.updateLasers(getTimeFactorBetweenUpdates());
+    if(currState != GameState::intro)
+    {
+        meteorManager.spawnMeteorsRandomly(getTimeFactorBetweenUpdates(), &bird);
+    }
+}
+
+void testCollisions() {
+    collectGameObjects();
+    for(int i=0; i<((int)gameObjects.size())-1; i++) {
+        for(size_t j=i+1; j<gameObjects.size(); j++) {
+            gameObjects[i]->testCollision(gameObjects[j]);
+        }
+    }
+}
+
+void handleCollisions() {
+    if(bird.getCollided() || bird.touchingGround(camera.getHeightOfView())) {
+        changeStateToGameOver();
+        bird.setCollided(false);
+    }
+    laserManager.cleanupLasers(&camera);
+    meteorManager.cleanupMeteors(&bird);
+}
+
+void drawSkyBox() {
     glUseProgram(skyboxShading.getName());
 
     glDisable(GL_DEPTH_TEST);
 
     glBindTexture( GL_TEXTURE_2D, skyboxTexture.getName() );
 
-    float offset = gCamera.getOrientation()[3][0]/50.0f;
+    float offset = camera.getOrientation()[3][0]/50.0f;
 
     glUniform1f(skyboxOffsetLocation, offset);
     glUniform1i(skyboxSamplerLocation, 0/*GL_TEXTURE0*/);
@@ -113,38 +155,8 @@ void displaySkyBox() {
     glEnable(GL_DEPTH_TEST);
 }
 
-void displayFlappy() {
-    // Load texture at frame
-    glBindTexture( GL_TEXTURE_2D, flappyTexture.getName() );
-
-    //send the orientation matrix to the shader
-    glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(bird.getOrientation()));
-
-    flappyMesh.draw();
-}
-
-void displayMeteors () {
-    // Load texture at frame
-    glBindTexture( GL_TEXTURE_2D, meteorTexture.getName() );
-    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
-        glUniformMatrix4fv(phongOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
-        iter->getMesh().draw();
-    }
-}
-
-void collectGameObjects () {
-    gameObjects.clear();
-    gameObjects.push_back(&bird);
-    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
-        gameObjects.push_back(&(*iter));
-    }
-    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
-        gameObjects.push_back(&(*iter));
-    }
-}
-
-void displayEllipsoids () {
-    if(drawEllips) {
+void drawEllipsoids () {
+    if(drawBoundingEllipsoids) {
         collectGameObjects();
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
@@ -159,166 +171,71 @@ void displayEllipsoids () {
     }
 }
 
-void cleanupLazors() {
-    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
-        if(iter->checkOutsideOfView(gCamera.getOrientation(), 5.0f)) {
-            iter = lazors.erase(iter);
-        }
-    }
-}
-
-void testCollisions() {
-    collectGameObjects();
-    for(int i=0; i<((int)gameObjects.size())-1; i++) {
-        for(size_t j=i+1; j<gameObjects.size(); j++) {
-            gameObjects[i]->testCollision(gameObjects[j]);
-        }
-    }
-    if(bird.getCollided()) {
-        changeStateToGameOver();
-        bird.setCollided(false);
-    }
-    if (bird.touchingGround(gCamera.getHeightOfView())) {
-        changeStateToGameOver();
-        bird.setCollided(false);
-        //bird.setMovement(glm::vec3(0.0f));
-    }
-    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
-        if(iter->getCollided()) {
-            iter = meteors.erase(iter);
-        }
-    }
-    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
-        if(iter->getCollided()) {
-            iter = lazors.erase(iter);
-        }
-    }
-}
-
-void updateLazors() {
-    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
-        iter->update(getTimeFactorBetweenUpdates());
-    }
-}
-
-void displayLazors () {
-    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end(); iter++) {
-        glBindTexture( GL_TEXTURE_2D, lazorTextures[iter->getTextureIndex()].getName());
-        glUniformMatrix4fv(flatOrientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(iter->getOrientation()));
-        lazorMesh.draw();
-    }
-}
-
-void spawnMeteor(vec3 position) {
-    int index = rand()%meteorMeshes.size();
-
-    meteors.push_back(GameObject(&(meteorMeshes[index])));
-    meteors.back().transform(glm::translate(position));
-}
-
-void spawnMeteorsRandomly() {
-    float updateTime = getTimeFactorBetweenUpdates();
-    countdown += updateTime;
-    float randSpawnTime;
-    int randNum = rand()%100;
-    randSpawnTime = 0.5 + (0.5*((meteors.size() + randNum) % 3));
-    //cout << randSpawnTime << endl;
-    if(countdown > randSpawnTime) {
-        int randomY = (rand()%19) - 9;
-        vec3 randomPos = vec3(bird.getOrientation()[3][0]+40.0f, randomY, 0.0f);
-        if(meteors.size() < maxAmountOfMeteors) {
-            spawnMeteor(randomPos);
-            countdown = rand()%3;
-        }
-    }
-}
-
-void cleanupMeteors() {
-    for(std::list<GameObject>::iterator iter = meteors.begin(); iter != meteors.end(); iter++) {
-        if(iter->checkAwayFromFlappy(bird.getOrientation()[3][0])) {
-            iter = meteors.erase(iter);
-        }
-    }
-}
-void clearMeteors(){
-    meteors.clear();
-}
-
-void fillLazorPositionsArray(float * posArray, int amount) {
-    int i=0;
-    for(std::list<Lazor>::iterator iter = lazors.begin(); iter != lazors.end() && i<amount; iter++) {
-        posArray[i*3] = iter->getOrientation()[3][0];
-        posArray[i*3+1] = iter->getOrientation()[3][1];
-        posArray[i*3+2] = iter->getOrientation()[3][2];
-        i++;
-    }
-    while(i<amount) {
-        posArray[i*3] = -100000.0f;
-        posArray[i*3+1] = -100000.0f;
-        posArray[i*3+2] = -100000.0f;
-        i++;
-    }
-}
-
-static void display(void)
+void renderFrame()
 {
-    diffTime = glutGet(GLUT_ELAPSED_TIME) - lastTime;
-    lastTime = glutGet(GLUT_ELAPSED_TIME);
-
-    bird.update(getTimeFactorBetweenUpdates(), gCamera.getHeightOfView());
-    if(currState == GameState::intro)
-    {
-        if (bird.getOrientation()[3][1] < -1 && bird.getVelocity()[1] < 0) {
-                bird.jump();
-        }
-    }
-
-    updateLazors();
-    cleanupLazors();
-
-    testCollisions();
-
     //Clear the render buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glActiveTexture(GL_TEXTURE0);
 
     // make camera move with bird
-    gCamera.offsetPosition(glm::vec3(1.0f, 0.0f, 0.0f)*bird.getFlyVelocity()*getTimeFactorBetweenUpdates());
+    camera.offsetPosition(glm::vec3(1.0f, 0.0f, 0.0f)*bird.getFlyVelocity()*getTimeFactorBetweenUpdates());
 
-    displaySkyBox();
+    drawSkyBox();
 
     //Select which shader program we use
     glUseProgram(phongShading.getName());
 
     // send the camera matrix to the shader
-    glUniformMatrix4fv(phongCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.getOrientation()));
+    glUniformMatrix4fv(phongCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(camera.getOrientation()));
 
     //send the texture selection to the shader
     glUniform1i(phongSamplerLocation, 0/*GL_TEXTURE0*/);
 
-    float lazorPositions[30];
-    fillLazorPositionsArray(lazorPositions, 10);
-    glUniform3fv(phongLazorPositionsLocation, 10, lazorPositions);
+    float laserPositions[30];
+    laserManager.fillLaserPositionsArray(laserPositions, 10);
+    glUniform3fv(phongLazorPositionsLocation, 10, laserPositions);
 
-    displayFlappy();
-    displayMeteors();
-
-    if(currState != GameState::intro)
-    {
-        spawnMeteorsRandomly();
-        cleanupMeteors();
-    }
+    bird.draw(phongOrientationMatrixLocation);
+    meteorManager.drawMeteors(phongOrientationMatrixLocation);
 
     glUseProgram(flatShading.getName());
-    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(gCamera.getOrientation()));
+    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(camera.getOrientation()));
 
-    displayEllipsoids();
-
-    displayLazors();
+    laserManager.drawLasers(flatOrientationMatrixLocation);
+    drawEllipsoids();
 
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
+}
+
+static void updateGame(void)
+{
+    int glutElapsedTime = glutGet(GLUT_ELAPSED_TIME);
+    diffTime = glutElapsedTime - lastTime;
+    lastTime = glutElapsedTime;
+
+    updateObjects();
+
+    renderFrame();
+
+    testCollisions();
+
+    handleCollisions();
+}
+
+static void idle(void)
+{
+    glutPostRedisplay();
+}
+
+static void resize(int width, int height)
+{
+    const float ar = (float) width / (float) height;
+
+    camera.setViewportAspectRatio(ar);
+
+    glViewport(0, 0, width, height);
 }
 
 static void keyUp(unsigned char key, int x, int y) {
@@ -330,14 +247,6 @@ static void keyUp(unsigned char key, int x, int y) {
     if (key == ' ') {
         jumped = false;
     }
-}
-
-static void shootLazor()
-{
-    mat4 orientation = bird.getOrientation();
-    vec3 direction = bird.getVelocity();
-
-    lazors.push_front(Lazor(orientation, direction, &lazorMesh));
 }
 
 static void key(unsigned char key, int x, int y)
@@ -353,14 +262,14 @@ static void key(unsigned char key, int x, int y)
             exit(0);
             break;
          case 'l':
-            drawEllips = !drawEllips;
+            drawBoundingEllipsoids = !drawBoundingEllipsoids;
             break;
         case ' ':
             if(currState == GameState::intro)
             {
                 changeStateToPlaying();
             }
-            if (currState == GameState::playing && jumped == false && bird.getOrientation()[3][1] < gCamera.getHeightOfView()*0.85) {
+            if (currState == GameState::playing && jumped == false && bird.getOrientation()[3][1] < camera.getHeightOfView()*0.85) {
                 bird.jump();
                 jumped = true;
             }
@@ -368,7 +277,7 @@ static void key(unsigned char key, int x, int y)
         case 'p':
             if (currState != GameState::gameOver)
             {
-                shootLazor();
+                laserManager.shootLaser(&bird);
             }
             break;
         case 'r':
@@ -382,15 +291,10 @@ static void key(unsigned char key, int x, int y)
     glutPostRedisplay();
 }
 
-static void idle(void)
-{
-    glutPostRedisplay();
-}
-
 bool setupOpenGL (int argc, char *argv[]) {
         //Initialize GLUT and create window in which we can draw using OpenGL
     glutInit(&argc, argv);
-    glutInitWindowSize(640,480);
+    glutInitWindowSize(800,600);
     glutInitWindowPosition(10,10);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 
@@ -425,7 +329,7 @@ bool setupOpenGL (int argc, char *argv[]) {
 
     //Set GLUT callback functions
     glutReshapeFunc(resize);
-    glutDisplayFunc(display);
+    glutDisplayFunc(updateGame);
     glutKeyboardFunc(key);
     glutKeyboardUpFunc(keyUp);
     glutIdleFunc(idle);
@@ -478,74 +382,35 @@ void setupShaders() {
 }
 
 void setupTextures() {
-    meteorTexture.load("textures/meteor.jpg");
     flappyTexture.load("textures/camoFlap.png");
     sphereTexture.load("textures/white.png");
     skyboxTexture.load("textures/skybox.png");
 
-    lazorTextures[0].load("textures/lazor0.png");
-    lazorTextures[1].load("textures/lazor1.png");
-    lazorTextures[2].load("textures/lazor2.png");
-}
-
-void makeMeteorMeshes(int amount) {
-    meteorMeshes.reserve(amount);
-    for(int i=0; i<amount; i++) {
-        Geometry geomMeteor;
-        geomMeteor.makeRandomMeteor(15, 15, 12, 0.05f);
-        meteorMeshes.push_back(Mesh(geomMeteor));
-        geomMeteor.remove();
-    }
+    meteorManager.loadMeteorTexture();
+    laserManager.loadLaserTextures();
 }
 
 void setupModels() {
-    Geometry geomSphere, geomSkybox, geomFlappy, geomLazor;
+    Geometry geomSphere, geomSkybox, geomFlappy;
 
     //Make geometry
-    //geom1.makeRandomMeteor(15,15,12,0.05f);
     geomSphere.makeSphere(20, 20);
     geomSkybox.makeQuad();
 
     geomFlappy.loadOBJ("models/FlappyDerpinator.obj", true);
-    //geomFlappy.loadOBJ("models/Satellite1.obj", false);
-    geomLazor.loadOBJ("models/lazor.obj", true);
 
     sphereMesh.makeMesh(geomSphere);
     skyboxMesh.makeMesh(geomSkybox);
     flappyMesh.makeMesh(geomFlappy);
-    lazorMesh.makeMesh(geomLazor);
-
-    lazorMesh.setEllipsoid(BoundingEllipsoid(glm::translate(vec3(0.5f, 0.0f, 0.0f))*glm::scale(vec3(1.054378f, 0.211248f, 0.211248f)), 1.054378f));
 
     bird.setMesh(&flappyMesh);
+    bird.setTexture(&flappyTexture);
     bird.startFlying();
 
-    //clear geometry memory, because it had been copied to the video card
-    geomSphere.remove();
-    geomSkybox.remove();
-    geomFlappy.remove();
-    geomLazor.remove();
+    laserManager.loadLaserMesh();
+    meteorManager.makeMeteorMeshes(10);
 
-    makeMeteorMeshes(10);
-}
-
-void changeStateToIntro()
-{
-    cout << "Going back to intro!" << endl;
-    currState = GameState::intro;
-    clearMeteors();
-    bird.startFlying();
-}
-void changeStateToPlaying()
-{
-    cout << "Starting game!" << endl;
-    currState = GameState::playing;
-}
-void changeStateToGameOver()
-{
-    cout << "Game over!" << endl;
-    cout << "Press r to get back to intro!" << endl;
-    currState = GameState::gameOver;
+    //Geometry instances can go out of scope because the geometry has been copied to the video card
 }
 
 //Program entry point
@@ -556,8 +421,8 @@ int main(int argc, char *argv[])
     setupTextures();
     setupModels();
 
-    gCamera = Camera(glm::vec3(0.0f,0.0f,24.0f));
-    //gCamera.setPosition(glm::vec3(0.0f,0.0f,24.0f));
+    camera = Camera(glm::vec3(0.0f,0.0f,24.0f));
+    //camera.setPosition(glm::vec3(0.0f,0.0f,24.0f));
 
     //seed the random number generator
     srand(time(0));

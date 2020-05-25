@@ -1,7 +1,9 @@
 #ifndef HPP_GAMEOBJECT
 #define HPP_GAMEOBJECT
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "Mesh.hpp"
+#include "Texture.hpp"
 #include "BoundingEllipsoid.hpp"
 #include "glmToCout.hpp"
 
@@ -11,6 +13,7 @@ using std::endl;
 class GameObject {
     protected:
     Mesh* mesh;
+    Texture* texture;
     glm::mat4 orientation;
     glm::vec3 velocity;
     bool collided;
@@ -19,12 +22,13 @@ class GameObject {
     GameObject() {
         collided = false;
     }
-    GameObject(Mesh* mesh) {
+    GameObject(Mesh* mesh, Texture* texture) {
         this->mesh = mesh;
+        this->texture = texture;
         collided = false;
     }
     //Only works for objects completely before the near clipping plane
-    //Which is all object in this games
+    //Which is all objects in this game
     bool checkOutsideOfView (const glm::mat4& camera, float margin) {
         float stopValue = 1.0f + margin;
         float radius = mesh->getEllipsoid().radius;
@@ -41,7 +45,7 @@ class GameObject {
     }
 
     //Only works for objects completely before the near clipping plane
-    //Which is all object in this games
+    //Which is all objects in this game
     bool checkOutsideOfView (const glm::mat4& camera) {
         float radius = mesh->getEllipsoid().radius;
         glm::vec4 centerPos = orientation[3];
@@ -88,6 +92,9 @@ class GameObject {
     void setMesh(Mesh* mesh) {
         this->mesh = mesh;
     }
+    void setTexture(Texture* texture) {
+        this->texture = texture;
+    }
 
     bool getCollided() {
         return collided;
@@ -119,6 +126,16 @@ class GameObject {
 
     void setVelocityY(float velY) {
         velocity[1] = velY;
+    }
+
+    void draw(GLuint orientationMatrixLocation) {
+        // Load texture at frame
+        glBindTexture( GL_TEXTURE_2D, texture->getName() );
+
+        //send the orientation matrix to the shader
+        glUniformMatrix4fv(orientationMatrixLocation, 1, GL_FALSE, glm::value_ptr(orientation));
+
+        mesh->draw();
     }
 
 };
