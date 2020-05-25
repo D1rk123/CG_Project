@@ -51,7 +51,7 @@ public:
         if(gameState == GameState::gameOver)
         {
             drawQuad(flatOrientationMatrixLocation, gameOverTexture, glm::vec3(0, 0.6, 0), pixelsToHeight*210, screenAspectRatio, 1357.0f/210.0f);
-            drawQuad(flatOrientationMatrixLocation, restartTexture, glm::vec3(0, -0.6, 0), pixelsToHeight*159, screenAspectRatio, 550.0f/159.0f);
+            drawQuad(flatOrientationMatrixLocation, restartTexture, glm::vec3(0, -0.6, 0), pixelsToHeight*159, screenAspectRatio, 553.0f/163.0f);
         }
     }
 };
