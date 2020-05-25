@@ -2,7 +2,7 @@
 Laser Bird is an single player arcade game inspired by Flappy Bird. Hop through space and shoot lasers to make a way through the asteroid field.
 
 ## Gameplay
-Press the space bar with space to fly up, press P to shoot a laser. If your spaceship gets hit by a meteor or hits the botom of the screen you're game over. You can remove meteors by hitting them with a laser.
+Press the space bar to fly up, press P to shoot a laser. If your spaceship gets hit by a meteor or hits the botom of the screen you're game over. You can remove meteors by hitting them with a laser.
 
 ![Screenshot](https://raw.githubusercontent.com/D1rk123/Laser-Bird/master/GithubImages/Screenshot720p.png)
 
