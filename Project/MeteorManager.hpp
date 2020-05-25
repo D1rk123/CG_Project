@@ -58,7 +58,7 @@ public:
     void clearMeteors(){
         meteors.clear();
     }
-    void drawMeteors (GLuint phongOrientationMatrixLocation) {
+    void draw (GLuint phongOrientationMatrixLocation) {
         for(auto iter = meteors.begin(); iter != meteors.end(); iter++) {
             iter->draw(phongOrientationMatrixLocation);
         }

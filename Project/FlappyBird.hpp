@@ -14,6 +14,7 @@ class FlappyBird : public GameObject
     float flyVelocity;
     float maxVelocity;
     float jumpSpeed;
+    bool hasJumped;
 
     public:
         FlappyBird() : GameObject(){
@@ -22,6 +23,7 @@ class FlappyBird : public GameObject
             flyVelocity = 10.0f;
             maxVelocity = 25.0f;
             jumpSpeed = 10.0f;
+            hasJumped = false;
         }
 
         void setFlyVelocity(float vel) {
@@ -32,13 +34,17 @@ class FlappyBird : public GameObject
             return flyVelocity;
         }
 
+        float getJumpSpeed() {
+            return jumpSpeed;
+        }
+
         void startFlying() {
             setVelocity(glm::vec3(flyVelocity,0.0f,0.0f));
             orientation[3][1] = 1.5f;
         }
 
         void jump() {
-            increaseVelocityY(jumpSpeed);
+            hasJumped = true;
         }
 
         void increaseFallVelocity(float seconds, float height) {
@@ -54,6 +60,10 @@ class FlappyBird : public GameObject
         }
 
         void update(float elapsedTime, float height) {
+            if(hasJumped) {
+                increaseVelocityY(jumpSpeed);
+                hasJumped = false;
+            }
             // update flymovement
             increaseFallVelocity(elapsedTime, height);
             glm::vec3 position = glm::vec3(orientation[3][0], orientation[3][1], orientation[3][2]);

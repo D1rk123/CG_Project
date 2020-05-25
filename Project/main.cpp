@@ -26,6 +26,8 @@
 #include "BoundingEllipsoid.hpp"
 #include "LaserManager.hpp"
 #include "MeteorManager.hpp"
+#include "GameState.hpp"
+#include "GameStateScreenManager.hpp"
 
 
 using namespace std;
@@ -41,6 +43,8 @@ const char* phongFragmentShaderName = "shaders\\phong.frag";
 const char* flatVertexShaderName = "shaders\\flat.vert";
 const char* flatFragmentShaderName = "shaders\\flat.frag";
 
+int resolutionX=800, resolutionY=600;
+
 GLuint phongCameraMatrixLocation, phongOrientationMatrixLocation, phongSamplerLocation, phongLazorPositionsLocation;
 GLuint skyboxOffsetLocation, skyboxSamplerLocation;
 GLuint flatCameraMatrixLocation, flatOrientationMatrixLocation, flatSamplerLocation;
@@ -54,26 +58,24 @@ LaserManager laserManager;
 MeteorManager meteorManager(100);
 FlappyBird bird;
 vector<GameObject*> gameObjects;
+GameStateScreenManager gameStateScreenManager;
 
 Camera camera = Camera();
 
 int lastTime, diffTime;
+int nextLaserTime = 1000;
 
 bool jumped = false;
 
 bool drawBoundingEllipsoids = false;
 
-enum class GameState {
-    intro,
-    playing,
-    gameOver
-};
 GameState currState = GameState::intro;
 
 void changeStateToIntro()
 {
     cout << "Going back to intro!" << endl;
     currState = GameState::intro;
+    nextLaserTime = lastTime + 500;
     meteorManager.clearMeteors();
     bird.startFlying();
 }
@@ -108,8 +110,13 @@ void updateObjects() {
     bird.update(getTimeFactorBetweenUpdates(), camera.getHeightOfView());
     if(currState == GameState::intro)
     {
-        if (bird.getOrientation()[3][1] < -1 && bird.getVelocity()[1] < 0) {
+        if (bird.getVelocity()[1] < -0.55*bird.getJumpSpeed() || bird.getOrientation()[3][1] < -1 && bird.getVelocity()[1] < 0) {
                 bird.jump();
+        }
+        if(lastTime > nextLaserTime)
+        {
+            laserManager.shootLaser(&bird);
+            nextLaserTime = lastTime+200+rand()%800;
         }
     }
 
@@ -197,13 +204,18 @@ void renderFrame()
     glUniform3fv(phongLazorPositionsLocation, 10, laserPositions);
 
     bird.draw(phongOrientationMatrixLocation);
-    meteorManager.drawMeteors(phongOrientationMatrixLocation);
+    meteorManager.draw(phongOrientationMatrixLocation);
 
     glUseProgram(flatShading.getName());
     glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(camera.getOrientation()));
 
-    laserManager.drawLasers(flatOrientationMatrixLocation);
+    laserManager.draw(flatOrientationMatrixLocation);
     drawEllipsoids();
+
+    glm::mat4 identity;
+    glUniformMatrix4fv(flatCameraMatrixLocation, 1, GL_FALSE, glm::value_ptr(identity));
+    const float screenAspectRatio = static_cast<float>(resolutionX)/static_cast<float>(resolutionY);
+    gameStateScreenManager.draw(flatOrientationMatrixLocation, currState, screenAspectRatio);
 
     //swap the renderbuffer with the screenbuffer
     glutSwapBuffers();
@@ -226,11 +238,14 @@ static void updateGame(void)
 
 static void idle(void)
 {
-    glutPostRedisplay();
+    updateGame();
+    //glutPostRedisplay();
 }
 
 static void resize(int width, int height)
 {
+    resolutionX = width;
+    resolutionY = height;
     const float ar = (float) width / (float) height;
 
     camera.setViewportAspectRatio(ar);
@@ -278,6 +293,7 @@ static void key(unsigned char key, int x, int y)
             if (currState != GameState::gameOver)
             {
                 laserManager.shootLaser(&bird);
+                nextLaserTime = lastTime+200+rand()%800;
             }
             break;
         case 'r':
@@ -294,7 +310,7 @@ static void key(unsigned char key, int x, int y)
 bool setupOpenGL (int argc, char *argv[]) {
         //Initialize GLUT and create window in which we can draw using OpenGL
     glutInit(&argc, argv);
-    glutInitWindowSize(800,600);
+    glutInitWindowSize(resolutionX,resolutionY);
     glutInitWindowPosition(10,10);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 
@@ -409,6 +425,8 @@ void setupModels() {
 
     laserManager.loadLaserMesh();
     meteorManager.makeMeteorMeshes(10);
+
+    gameStateScreenManager.init();
 
     //Geometry instances can go out of scope because the geometry has been copied to the video card
 }

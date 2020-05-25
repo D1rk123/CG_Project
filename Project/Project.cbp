@@ -65,10 +65,12 @@
 		<Unit filename="FlappyBird.hpp" />
 		<Unit filename="GameObject.cpp" />
 		<Unit filename="GameObject.hpp" />
+		<Unit filename="GameState.hpp" />
+		<Unit filename="GameStateScreenManager.hpp" />
 		<Unit filename="Geometry.cpp" />
 		<Unit filename="Geometry.hpp" />
+		<Unit filename="Laser.hpp" />
 		<Unit filename="LaserManager.hpp" />
-		<Unit filename="Lazor.hpp" />
 		<Unit filename="Mesh.cpp" />
 		<Unit filename="Mesh.hpp" />
 		<Unit filename="MeteorManager.hpp" />

@@ -354,10 +354,10 @@ void Geometry::makeQuad() {
     vertices = new Vertex[4];
     indices = new unsigned int[6];
 
-    vertices[0] = Vertex(vec3(-1.0f, -1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 0.0f));
-    vertices[1] = Vertex(vec3(-1.0f,  1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f));
-    vertices[2] = Vertex(vec3(1.0f,  -1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f));
-    vertices[3] = Vertex(vec3(1.0f,   1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 1.0f));
+    vertices[0] = Vertex(vec3(-1.0f, -1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f));
+    vertices[1] = Vertex(vec3(-1.0f,  1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 0.0f));
+    vertices[2] = Vertex(vec3(1.0f,  -1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 1.0f));
+    vertices[3] = Vertex(vec3(1.0f,   1.0f, -0.9f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f));
 
     indices[0] = 2;
     indices[1] = 1;

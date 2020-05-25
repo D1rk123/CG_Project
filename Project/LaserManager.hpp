@@ -38,7 +38,7 @@ public:
         }
     }
 
-    void drawLasers (GLuint flatOrientationMatrixLocation) {
+    void draw (GLuint flatOrientationMatrixLocation) {
         for(auto iter = lasers.begin(); iter != lasers.end(); ++iter) {
             iter->draw(flatOrientationMatrixLocation);
         }
