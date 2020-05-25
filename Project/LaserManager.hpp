@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "GameObject.hpp"
+#include "Laser.hpp"
 #include "Mesh.hpp"
 #include "Texture.hpp"
 

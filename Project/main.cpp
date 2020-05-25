@@ -18,7 +18,7 @@
 #include <IL/il.h>
 
 #include "Mesh.hpp"
-#include "Lazor.hpp"
+#include "Laser.hpp"
 #include "FlappyBird.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
