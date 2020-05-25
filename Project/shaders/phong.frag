@@ -13,7 +13,7 @@ uniform vec3 lazorPos[10];
 
 void main(void)
 {
-    vec4 ambient = vec4(0.5, 0.5, 0.5, 0);
+    vec4 ambient = vec4(0.4, 0.4, 0.4, 0);
     vec3 globLightPos = vec3(0, 0, 10);
     vec3 globDiffuse = vec3(0.3, 0.3, 0.3);
     vec3 globSpecular = vec3(0.1,0.1,0.1);
