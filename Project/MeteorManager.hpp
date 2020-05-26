@@ -75,7 +75,7 @@ public:
     }
 
     void loadMeteorTexture() {
-        meteorTexture.load("textures/meteor.jpg");
+        meteorTexture.load("textures/meteor.png");
     }
 
     void appendMeteors(std::vector<GameObject*>* gameObjects) {

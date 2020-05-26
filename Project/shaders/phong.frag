@@ -13,9 +13,9 @@ uniform vec3 lazorPos[10];
 
 void main(void)
 {
-    vec4 ambient = vec4(0.4, 0.4, 0.4, 0);
-    vec3 globLightPos = vec3(0, 0, 10);
-    vec3 globDiffuse = vec3(0.3, 0.3, 0.3);
+    vec4 ambient = vec4(0.45, 0.45, 0.45, 0);
+    vec3 globLightPos = vec3(10, 10, 10);
+    vec3 globDiffuse = vec3(0.35, 0.35, 0.35);
     vec3 globSpecular = vec3(0.1,0.1,0.1);
     float shininess = 10;
     float shininessFactor = 3.0f;
@@ -32,7 +32,7 @@ void main(void)
     vec3 specSum = globSpecular * pow(max(dot(globReflection,globEyeDir),0.0),shininess * shininessFactor);
 
     vec3 lightPos = lazorPos[0];
-    vec3 diffuse = vec3(1.0, 0.2, 0.2);
+    vec3 diffuse = vec3(0.8, 0.075, 0.075);
     vec3 specular = vec3(0.3,0.0,0.0);
 
     for(int i=0; i<10; i++) {
