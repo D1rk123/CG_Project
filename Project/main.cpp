@@ -64,6 +64,7 @@ Camera camera = Camera();
 
 int lastTime, diffTime;
 int nextLaserTime = 1000;
+int gameStartedTime, gameOverTime;
 
 bool jumped = false;
 
@@ -74,29 +75,38 @@ GameState currState = GameState::intro;
 void changeStateToIntro()
 {
     cout << "Going back to intro!" << endl;
-    currState = GameState::intro;
     nextLaserTime = lastTime + 500;
     meteorManager.clearMeteors();
     bird.startFlying();
+    currState = GameState::intro;
 }
 void changeStateToPlaying()
 {
     cout << "Starting game!" << endl;
+    gameStartedTime = lastTime;
     currState = GameState::playing;
 }
 void changeStateToGameOver()
 {
     cout << "Game over!" << endl;
     cout << "Press r to get back to intro!" << endl;
+    gameOverTime = lastTime;
     currState = GameState::gameOver;
 }
 
 
-float getTimeFactorBetweenUpdates() {
-    //cout << diffTime << endl;
-    float timeseconds = (float)diffTime/1000;
-    float factor = 1.0f;
-    return timeseconds*factor;
+float getFrameDuration() {
+    return static_cast<float>(diffTime)/1000.0f;
+}
+float getGameDuration() {
+    if(currState == GameState::playing)
+    {
+        return static_cast<float>(lastTime-gameStartedTime)/1000.0f;
+    } else if (currState == GameState::gameOver) {
+        return static_cast<float>(gameOverTime-gameStartedTime)/1000.0f;
+    } else {
+        return 0.0f;
+    }
 }
 
 void collectGameObjects () {
@@ -107,10 +117,9 @@ void collectGameObjects () {
 }
 
 void updateObjects() {
-    bird.update(getTimeFactorBetweenUpdates(), camera.getHeightOfView());
-    if(currState == GameState::intro)
-    {
-        if (bird.getVelocity()[1] < -0.55*bird.getJumpSpeed() || bird.getOrientation()[3][1] < -1 && bird.getVelocity()[1] < 0) {
+    bird.update(getFrameDuration(), getGameDuration(), camera.getHeightOfView());
+    if(currState == GameState::intro) {
+        if (bird.getVelocity()[1] < -0.55*bird.getJumpSpeed() || (bird.getOrientation()[3][1] < -1 && bird.getVelocity()[1] < 0)) {
                 bird.jump();
         }
         if(lastTime > nextLaserTime)
@@ -120,10 +129,9 @@ void updateObjects() {
         }
     }
 
-    laserManager.updateLasers(getTimeFactorBetweenUpdates());
-    if(currState != GameState::intro)
-    {
-        meteorManager.spawnMeteorsRandomly(getTimeFactorBetweenUpdates(), &bird);
+    laserManager.updateLasers(getFrameDuration());
+    if(currState != GameState::intro) {
+        meteorManager.spawnMeteorsRandomly(getFrameDuration(), &bird);
     }
 }
 
@@ -186,7 +194,7 @@ void renderFrame()
     glActiveTexture(GL_TEXTURE0);
 
     // make camera move with bird
-    camera.offsetPosition(glm::vec3(1.0f, 0.0f, 0.0f)*bird.getFlyVelocity()*getTimeFactorBetweenUpdates());
+    camera.setPosition(glm::vec3(bird.getOrientation()[3][0], 0.0f, 24.0f));
 
     drawSkyBox();
 

@@ -11,8 +11,9 @@ class FlappyBird : public GameObject
 {
     float gravity;
     float outOfScreenSpring;
-    float flyVelocity;
-    float maxVelocity;
+    float startFlyVelocity;
+    float flyAcceleration;
+    float maxYVelocity;
     float jumpSpeed;
     bool hasJumped;
 
@@ -20,18 +21,11 @@ class FlappyBird : public GameObject
         FlappyBird() : GameObject(){
             gravity = 9.81f;
             outOfScreenSpring = 20.0f;
-            flyVelocity = 10.0f;
-            maxVelocity = 25.0f;
+            startFlyVelocity = 10.0f;
+            flyAcceleration = 0.15f;
+            maxYVelocity = 25.0f;
             jumpSpeed = 10.0f;
             hasJumped = false;
-        }
-
-        void setFlyVelocity(float vel) {
-            flyVelocity = vel;
-        }
-
-        float getFlyVelocity() {
-            return flyVelocity;
         }
 
         float getJumpSpeed() {
@@ -39,7 +33,7 @@ class FlappyBird : public GameObject
         }
 
         void startFlying() {
-            setVelocity(glm::vec3(flyVelocity,0.0f,0.0f));
+            setVelocity(glm::vec3(startFlyVelocity,0.0f,0.0f));
             orientation[3][1] = 1.5f;
         }
 
@@ -59,19 +53,20 @@ class FlappyBird : public GameObject
             return (orientation[3][1] < -height+radiusFlappy);
         }
 
-        void update(float elapsedTime, float height) {
+        void update(float frameDuration, float gameDuration, float height) {
+            velocity[0] = startFlyVelocity + gameDuration * flyAcceleration;
+
             if(hasJumped) {
                 increaseVelocityY(jumpSpeed);
                 hasJumped = false;
             }
-            // update flymovement
-            increaseFallVelocity(elapsedTime, height);
+            increaseFallVelocity(frameDuration, height);
             glm::vec3 position = glm::vec3(orientation[3][0], orientation[3][1], orientation[3][2]);
-            glm::vec3 update = velocity*elapsedTime;
-            if(velocity[1] > maxVelocity) {
-                velocity[1] = maxVelocity;
-            } else if (velocity[1] < -maxVelocity) {
-                velocity[1] = -maxVelocity;
+            glm::vec3 update = velocity*frameDuration;
+            if(velocity[1] > maxYVelocity) {
+                velocity[1] = maxYVelocity;
+            } else if (velocity[1] < -maxYVelocity) {
+                velocity[1] = -maxYVelocity;
             }
 
             // Find rotation matrix to make flappybird face in direction of movement
