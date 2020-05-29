@@ -366,3 +366,13 @@ void Geometry::makeQuad() {
     indices[4] = 3;
     indices[5] = 1;
 }
+
+void Geometry::remove() {
+    if (vertices != 0){
+        delete [] vertices;
+        assert(indices != 0);
+        delete [] indices;
+        vertices = 0;
+        indices = 0;
+    }
+}

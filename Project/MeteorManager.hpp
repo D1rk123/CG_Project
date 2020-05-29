@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "GameObject.hpp"
+#include "FlappyBird.hpp"
 #include "Mesh.hpp"
 
 class MeteorManager
@@ -24,65 +25,18 @@ public:
 
     }
 
-    void spawnMeteor(glm::vec3 position) {
-        int index = rand()%meteorMeshes.size();
+    void spawnMeteor(glm::vec3 position);
+    void spawnMeteorsRandomly(float updateTime, FlappyBird* bird);
 
-        meteors.push_back(GameObject(&(meteorMeshes[index]), &meteorTexture));
-        meteors.back().transform(glm::translate(position));
-    }
+    void cleanupMeteors(FlappyBird* bird);
+    void clearMeteors();
 
-    void spawnMeteorsRandomly(float updateTime, FlappyBird* bird) {
-        countdown += updateTime;
-        float randSpawnTime;
-        int randNum = rand()%100;
-        randSpawnTime = 0.5 + (0.5*((meteors.size() + randNum) % 3));
-        //cout << randSpawnTime << endl;
-        if(countdown > randSpawnTime) {
-            int randomY = (rand()%19) - 9;
-            glm::vec3 randomPos = glm::vec3(bird->getOrientation()[3][0]+40.0f, randomY, 0.0f);
-            if(meteors.size() < maxAmountOfMeteors) {
-                spawnMeteor(randomPos);
-                countdown = rand()%3;
-            }
-        }
-    }
+    void draw (GLuint phongOrientationMatrixLocation);
 
-    void cleanupMeteors(FlappyBird* bird) {
-        for(auto iter = meteors.begin(); iter != meteors.end(); iter++) {
-            if(iter->getCollided() ||
-               iter->checkAwayFromFlappy(bird->getOrientation()[3][0])) {
-                iter = meteors.erase(iter);
-            }
-        }
-    }
-    void clearMeteors(){
-        meteors.clear();
-    }
-    void draw (GLuint phongOrientationMatrixLocation) {
-        for(auto iter = meteors.begin(); iter != meteors.end(); iter++) {
-            iter->draw(phongOrientationMatrixLocation);
-        }
-    }
+    void makeMeteorMeshes(int amount);
+    void loadMeteorTexture();
 
-    void makeMeteorMeshes(int amount) {
-        meteorMeshes.reserve(amount);
-        for(int i=0; i<amount; i++) {
-            Geometry geomMeteor;
-            geomMeteor.makeRandomMeteor(15, 15, 12, 0.05f);
-            meteorMeshes.push_back(Mesh(geomMeteor));
-            geomMeteor.remove();
-        }
-    }
-
-    void loadMeteorTexture() {
-        meteorTexture.load("textures/meteor.png");
-    }
-
-    void appendMeteors(std::vector<GameObject*>* gameObjects) {
-        for(auto iter = meteors.begin(); iter != meteors.end(); ++iter) {
-            gameObjects->push_back(&(*iter));
-        }
-    }
+    void appendMeteors(std::vector<GameObject*>* gameObjects);
 };
 
 #endif

@@ -1,5 +1,6 @@
 #ifndef HPP_GEOMETRY
 #define HPP_GEOMETRY
+#include <vector>
 #include <GL/gl.h>
 #include <glm/vec3.hpp>
 #include "Vertex.hpp"
@@ -32,15 +33,7 @@ class Geometry {
         return numIndices;
     }
 
-    void remove() {
-        if (vertices != 0){
-            delete [] vertices;
-            assert(indices != 0);
-            delete [] indices;
-            vertices = 0;
-            indices = 0;
-        }
-    }
+    void remove();
     ~Geometry() {
         remove();
     }
